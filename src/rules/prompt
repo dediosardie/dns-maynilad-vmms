@@ -1,0 +1,49 @@
+Design a modern, professional SaaS dashboard interface with a responsive layout that adapts seamlessly from desktop, tablet, and mobile devices.
+
+The dashboard should include a collapsible / toggleable sidebar navigation:
+
+On desktop: sidebar expanded by default with icons and labels
+
+On tablet: sidebar collapsed to icons only, expandable on tap
+
+On mobile: sidebar hidden by default and opens as an off-canvas drawer when the hamburger menu is tapped
+
+Layout Requirements:
+
+Top navigation bar with page title, search field, notification icon, and user profile menu
+
+Left sidebar containing primary navigation items (Dashboard, Analytics, Appointments, Patients, Billing, Settings) with icons
+
+Main content area displaying cards, charts, tables, and KPIs
+
+Cards should stack vertically on mobile and align in a grid on larger screens
+
+Design Style:
+
+Clean, minimal, and modern UI
+
+Soft shadows, rounded corners (8–12px)
+
+Neutral background with subtle accent color for highlights and active states
+
+Clear visual hierarchy and readable typography
+
+UX Considerations:
+
+Smooth sidebar toggle animation
+
+Touch-friendly buttons and spacing on mobile
+
+Sticky top bar for easy navigation
+
+Consistent spacing and alignment across breakpoints
+
+Accessibility:
+
+High contrast text
+
+Large tap targets on mobile
+
+Clear focus and hover states
+
+Overall, the dashboard should feel fast, intuitive, and scalable, suitable for a professional SaaS or management system.

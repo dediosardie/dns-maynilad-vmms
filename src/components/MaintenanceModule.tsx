@@ -1,0 +1,185 @@
+import { useState, useEffect } from 'react';
+import { Maintenance } from '../types';
+import MaintenanceTable from './MaintenanceTable';
+import MaintenanceForm from './MaintenanceForm';
+import Modal from './Modal';
+import { maintenanceStorage } from '../storage';
+
+interface MaintenanceModuleProps {
+  vehicles: Array<{ id: string; plate_number: string }>;
+}
+
+export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) {
+  const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
+  const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Load maintenances from storage on mount
+    const loadMaintenances = async () => {
+      try {
+        setIsLoading(true);
+        const storedMaintenances = await maintenanceStorage.getAll();
+        console.log('Loaded maintenance records:', storedMaintenances);
+        setMaintenances(storedMaintenances);
+      } catch (error) {
+        console.error('Error loading maintenance records:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadMaintenances();
+  }, []);
+
+  const handleScheduleMaintenance = async (maintenanceData: Omit<Maintenance, 'id'>) => {
+    const newMaintenance: Maintenance = {
+      ...maintenanceData,
+      id: crypto.randomUUID(),
+    };
+    try {
+      await maintenanceStorage.save(newMaintenance);
+      setMaintenances([...maintenances, newMaintenance]);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to schedule maintenance:', error);
+      alert('Failed to schedule maintenance. Please try again.');
+    }
+  };
+
+  const handleUpdateMaintenance = async (maintenance: Maintenance) => {
+    try {
+      await maintenanceStorage.update(maintenance);
+      setMaintenances(maintenances.map(m => m.id === maintenance.id ? maintenance : m));
+      setEditingMaintenance(undefined);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error('Failed to update maintenance:', error);
+      alert('Failed to update maintenance. Please try again.');
+    }
+  };
+
+  const handleMarkCompleted = async (id: string) => {
+    try {
+      await maintenanceStorage.markCompleted(id);
+      setMaintenances(maintenances.map(m => 
+        m.id === id ? { ...m, status: 'completed' as const } : m
+      ));
+    } catch (error) {
+      console.error('Failed to mark maintenance as completed:', error);
+      alert('Failed to mark maintenance as completed. Please try again.');
+    }
+  };
+
+  const handleEditMaintenance = (maintenance: Maintenance) => {
+    setEditingMaintenance(maintenance);
+    setIsModalOpen(true);
+  };
+
+  const handleAddMaintenance = () => {
+    setEditingMaintenance(undefined);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingMaintenance(undefined);
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Total Records</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{maintenances.length}</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Pending</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">{maintenances.filter(m => m.status === 'pending').length}</p>
+            </div>
+            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-600">Completed</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">{maintenances.filter(m => m.status === 'completed').length}</p>
+            </div>
+            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Card */}
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-slate-200">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Maintenance Schedule</h2>
+            <p className="text-sm text-slate-600 mt-1">Track and manage vehicle maintenance</p>
+          </div>
+          <button
+            onClick={handleAddMaintenance}
+            className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm"
+          >
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            Schedule Maintenance
+          </button>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+              <p className="text-slate-600 mt-4">Loading maintenance records...</p>
+            </div>
+          </div>
+        ) : (
+          <div className="p-6">
+            <MaintenanceTable 
+              maintenances={maintenances} 
+              vehicles={vehicles}
+              onMarkCompleted={handleMarkCompleted}
+              onEdit={handleEditMaintenance}
+            />
+          </div>
+        )}
+      </div>
+
+      <Modal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title={editingMaintenance ? 'Edit Maintenance' : 'Schedule New Maintenance'}
+      >
+        <MaintenanceForm
+          onSchedule={handleScheduleMaintenance}
+          onUpdate={handleUpdateMaintenance}
+          vehicles={vehicles}
+          initialData={editingMaintenance}
+        />
+      </Modal>
+    </div>
+  );
+}
