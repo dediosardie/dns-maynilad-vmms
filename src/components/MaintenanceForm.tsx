@@ -4,7 +4,7 @@ import { Maintenance } from '../types';
 interface MaintenanceFormProps {
   onSchedule: (maintenance: Omit<Maintenance, 'id'>) => void;
   onUpdate?: (maintenance: Maintenance) => void;
-  vehicles: Array<{ id: string; plate_number: string }>;
+  vehicles: Array<{ id: string; plate_number: string; conduction_number?: string }>;
   initialData?: Maintenance;
 }
 
@@ -15,6 +15,7 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     scheduled_date: initialData?.scheduled_date || '',
     status: initialData?.status || 'pending',
     cost: initialData?.cost || undefined,
+    description: initialData?.description || '',
   });
 
   useEffect(() => {
@@ -25,6 +26,7 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
         scheduled_date: initialData.scheduled_date,
         status: initialData.status,
         cost: initialData.cost,
+        description: initialData.description || '',
       });
     } else {
       setFormData({
@@ -33,6 +35,7 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
         scheduled_date: '',
         status: 'pending',
         cost: undefined,
+        description: '',
       });
     }
   }, [initialData]);
@@ -71,7 +74,7 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
             <option value="">Select a vehicle</option>
             {vehicles.map((vehicle) => (
               <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.plate_number}
+                {vehicle.plate_number}{(vehicle as any).conduction_number ? ` (${(vehicle as any).conduction_number})` : ''}
               </option>
             ))}
           </select>
@@ -118,6 +121,20 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
             className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1.5">
+          Description
+        </label>
+        <textarea
+          name="description"
+          value={formData.description || ''}
+          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          rows={4}
+          placeholder="Enter maintenance details, notes, or observations..."
+          className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+        />
       </div>
 
       <div className="mt-6 pt-6 border-t border-slate-200 flex justify-end">

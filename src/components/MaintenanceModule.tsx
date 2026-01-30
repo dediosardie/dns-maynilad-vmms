@@ -4,9 +4,11 @@ import MaintenanceTable from './MaintenanceTable';
 import MaintenanceForm from './MaintenanceForm';
 import Modal from './Modal';
 import { maintenanceStorage } from '../storage';
+import { notificationService } from '../services/notificationService';
+import { auditLogService } from '../services/auditLogService';
 
 interface MaintenanceModuleProps {
-  vehicles: Array<{ id: string; plate_number: string }>;
+  vehicles: Array<{ id: string; plate_number: string; conduction_number?: string }>;
 }
 
 export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) {
@@ -32,6 +34,11 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
     loadMaintenances();
   }, []);
 
+  // Dispatch event when maintenances update so other modules can react
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('maintenanceUpdated', { detail: maintenances }));
+  }, [maintenances]);
+
   const handleScheduleMaintenance = async (maintenanceData: Omit<Maintenance, 'id'>) => {
     const newMaintenance: Maintenance = {
       ...maintenanceData,
@@ -41,32 +48,65 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
       await maintenanceStorage.save(newMaintenance);
       setMaintenances([...maintenances, newMaintenance]);
       setIsModalOpen(false);
+      
+      notificationService.success(
+        'Maintenance Scheduled',
+        `${newMaintenance.maintenance_type} scheduled for vehicle ${newMaintenance.vehicle_id}`
+      );
+      await auditLogService.createLog(
+        'Maintenance Scheduled',
+        `Scheduled ${newMaintenance.maintenance_type} for ${newMaintenance.scheduled_date}`
+      );
     } catch (error) {
       console.error('Failed to schedule maintenance:', error);
+      notificationService.error('Failed to Schedule', 'Unable to schedule maintenance. Please try again.');
       alert('Failed to schedule maintenance. Please try again.');
     }
   };
 
   const handleUpdateMaintenance = async (maintenance: Maintenance) => {
+    const oldMaintenance = maintenances.find(m => m.id === maintenance.id);
     try {
       await maintenanceStorage.update(maintenance);
       setMaintenances(maintenances.map(m => m.id === maintenance.id ? maintenance : m));
       setEditingMaintenance(undefined);
       setIsModalOpen(false);
+      
+      notificationService.success(
+        'Maintenance Updated',
+        `${maintenance.maintenance_type} record has been updated`
+      );
+      await auditLogService.createLog(
+        'Maintenance Updated',
+        `Updated ${maintenance.maintenance_type} maintenance record`,
+        { before: oldMaintenance, after: maintenance }
+      );
     } catch (error) {
       console.error('Failed to update maintenance:', error);
+      notificationService.error('Failed to Update', 'Unable to update maintenance. Please try again.');
       alert('Failed to update maintenance. Please try again.');
     }
   };
 
   const handleMarkCompleted = async (id: string) => {
     try {
+      const maintenance = maintenances.find(m => m.id === id);
       await maintenanceStorage.markCompleted(id);
       setMaintenances(maintenances.map(m => 
         m.id === id ? { ...m, status: 'completed' as const } : m
       ));
+      
+      notificationService.success(
+        'Maintenance Completed',
+        `${maintenance?.maintenance_type || 'Service'} has been marked as completed`
+      );
+      await auditLogService.createLog(
+        'Maintenance Completed',
+        `Completed ${maintenance?.maintenance_type} maintenance`
+      );
     } catch (error) {
       console.error('Failed to mark maintenance as completed:', error);
+      notificationService.error('Failed to Complete', 'Unable to mark as completed. Please try again.');
       alert('Failed to mark maintenance as completed. Please try again.');
     }
   };

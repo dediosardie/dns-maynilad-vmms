@@ -1,29 +1,91 @@
 // Reporting & Analytics Dashboard - Defined per reporting-analytics-module.md
 import { useState, useEffect } from 'react';
 import { Vehicle, Driver, Maintenance, Trip, FuelTransaction, Incident } from '../types';
+import { vehicleStorage, driverStorage, maintenanceStorage } from '../storage';
+import { tripService, fuelService, incidentService } from '../services/supabaseService';
+
+// Format number with thousand separators
+const formatNumber = (num: number, decimals: number = 2): string => {
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+};
+
+// Format currency with Php prefix
+const formatCurrency = (amount: number): string => {
+  return `Php ${formatNumber(amount, 2)}`;
+};
 
 export default function ReportingAnalyticsDashboard() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [maintenanceRecords, setMaintenanceRecords] = useState<Maintenance[]>([]);
-  const [trips] = useState<Trip[]>([]);
-  const [fuelTransactions] = useState<FuelTransaction[]>([]);
-  const [incidents] = useState<Incident[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [fuelTransactions, setFuelTransactions] = useState<FuelTransaction[]>([]);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
   const [selectedReport, setSelectedReport] = useState<string>('dashboard');
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Load initial data from storage on mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [vehiclesData, driversData, maintenanceData, tripsData, fuelData, incidentsData] = await Promise.all([
+          vehicleStorage.getAll(),
+          driverStorage.getAll(),
+          maintenanceStorage.getAll(),
+          tripService.getAll(),
+          fuelService.getAllTransactions(),
+          incidentService.getAll(),
+        ]);
+        setVehicles(vehiclesData);
+        setDrivers(driversData);
+        setMaintenanceRecords(maintenanceData);
+        setTrips(tripsData);
+        setFuelTransactions(fuelData);
+        setIncidents(incidentsData);
+        console.log('Loaded data for reports:', {
+          vehicles: vehiclesData.length,
+          drivers: driversData.length,
+          maintenance: maintenanceData.length,
+          trips: tripsData.length,
+          fuelTransactions: fuelData.length,
+          incidents: incidentsData.length,
+        });
+      } catch (error) {
+        console.error('Error loading data for reports:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Listen for data updates from other modules
   useEffect(() => {
     const handleVehiclesUpdate = ((event: CustomEvent) => setVehicles(event.detail)) as EventListener;
     const handleDriversUpdate = ((event: CustomEvent) => setDrivers(event.detail)) as EventListener;
     const handleMaintenanceUpdate = ((event: CustomEvent) => setMaintenanceRecords(event.detail)) as EventListener;
+    const handleTripsUpdate = ((event: CustomEvent) => setTrips(event.detail)) as EventListener;
+    const handleFuelUpdate = ((event: CustomEvent) => setFuelTransactions(event.detail)) as EventListener;
+    const handleIncidentsUpdate = ((event: CustomEvent) => setIncidents(event.detail)) as EventListener;
     
     window.addEventListener('vehiclesUpdated', handleVehiclesUpdate);
     window.addEventListener('driversUpdated', handleDriversUpdate);
     window.addEventListener('maintenanceUpdated', handleMaintenanceUpdate);
+    window.addEventListener('tripsUpdated', handleTripsUpdate);
+    window.addEventListener('fuelUpdated', handleFuelUpdate);
+    window.addEventListener('incidentsUpdated', handleIncidentsUpdate);
     
     return () => {
       window.removeEventListener('vehiclesUpdated', handleVehiclesUpdate);
       window.removeEventListener('driversUpdated', handleDriversUpdate);
       window.removeEventListener('maintenanceUpdated', handleMaintenanceUpdate);
+      window.removeEventListener('tripsUpdated', handleTripsUpdate);
+      window.removeEventListener('fuelUpdated', handleFuelUpdate);
+      window.removeEventListener('incidentsUpdated', handleIncidentsUpdate);
     };
   }, []);
 
@@ -75,8 +137,17 @@ export default function ReportingAnalyticsDashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Report Type Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+            <p className="text-slate-600 mt-4">Loading report data...</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Report Type Selector */}
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
         <div className="flex items-center gap-2 overflow-x-auto">
           {/* Report types per markdown Section 2 */}
           {[
@@ -160,7 +231,7 @@ export default function ReportingAnalyticsDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Total Fuel Cost</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">${totalFuelCost.toLocaleString()}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalFuelCost)}</p>
                   </div>
                   <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
                     <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -196,7 +267,7 @@ export default function ReportingAnalyticsDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Avg Maintenance Cost</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">${averageMaintenanceCost}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(parseFloat(averageMaintenanceCost))}</p>
                   </div>
                   <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
                     <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -211,7 +282,7 @@ export default function ReportingAnalyticsDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Avg Cost Per Liter</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">${averageCostPerLiter}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(parseFloat(averageCostPerLiter))}</p>
                   </div>
                   <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
                     <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +303,7 @@ export default function ReportingAnalyticsDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Total Mileage</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{totalMileage.toLocaleString()} km</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatNumber(totalMileage, 0)} km</p>
                   </div>
                   <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
                     <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,7 +349,7 @@ export default function ReportingAnalyticsDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-slate-600">Cost Per Km</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">${costPerKm}</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(parseFloat(costPerKm))}</p>
                   </div>
                   <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
                     <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -340,7 +411,7 @@ export default function ReportingAnalyticsDashboard() {
                 {vehicles.map(vehicle => (
                   <tr key={vehicle.id} className="hover:bg-slate-50">
                     <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                      {vehicle.plate_number} - {vehicle.make} {vehicle.model}
+                      {vehicle.plate_number}{vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - {vehicle.make} {vehicle.model}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -378,7 +449,7 @@ export default function ReportingAnalyticsDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-sm text-slate-600">Total Cost</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">${totalMaintenanceCost.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalMaintenanceCost)}</p>
             </div>
             <div className="bg-slate-50 rounded-lg p-4">
               <p className="text-sm text-slate-600">Scheduled</p>
@@ -397,12 +468,69 @@ export default function ReportingAnalyticsDashboard() {
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <p className="text-sm text-slate-600">Average Cost Per Maintenance</p>
-              <p className="text-3xl font-bold text-blue-900 mt-1">${averageMaintenanceCost}</p>
+              <p className="text-3xl font-bold text-blue-900 mt-1">{formatCurrency(parseFloat(averageMaintenanceCost))}</p>
             </div>
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <p className="text-sm text-slate-600">Cost Per Vehicle</p>
-              <p className="text-3xl font-bold text-purple-900 mt-1">${costPerVehicle}</p>
+              <p className="text-3xl font-bold text-purple-900 mt-1">{formatCurrency(parseFloat(costPerVehicle))}</p>
             </div>
+          </div>
+
+          {/* Maintenance Records Table */}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Vehicle</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Type</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Scheduled Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Cost</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Description</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-200">
+                {maintenanceRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                      No maintenance records found
+                    </td>
+                  </tr>
+                ) : (
+                  maintenanceRecords.map(record => {
+                    const vehicle = vehicles.find(v => v.id === record.vehicle_id);
+                    return (
+                      <tr key={record.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                          {vehicle ? `${vehicle.plate_number || vehicle.conduction_number} - ${vehicle.make} ${vehicle.model}` : 'N/A'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700 capitalize">
+                          {record.maintenance_type.replace('_', ' ')}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700">
+                          {new Date(record.scheduled_date).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            record.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
+                            record.status === 'pending' ? 'bg-blue-100 text-blue-800' :
+                            'bg-slate-100 text-slate-800'
+                          }`}>
+                            {record.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700">
+                          {record.cost ? formatCurrency(record.cost) : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
+                          {record.description || '-'}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
@@ -423,17 +551,17 @@ export default function ReportingAnalyticsDashboard() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div className="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl p-6">
               <p className="text-sm opacity-90">Total Operating Cost</p>
-              <p className="text-3xl font-bold mt-2">${totalOperatingCost.toLocaleString()}</p>
+              <p className="text-3xl font-bold mt-2">{formatCurrency(totalOperatingCost)}</p>
               <p className="text-xs opacity-75 mt-1">Maintenance + Fuel</p>
             </div>
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-6">
               <p className="text-sm opacity-90">Cost Per Kilometer</p>
-              <p className="text-3xl font-bold mt-2">${costPerKm}</p>
-              <p className="text-xs opacity-75 mt-1">Average across {totalDistance.toLocaleString()} km</p>
+              <p className="text-3xl font-bold mt-2">{formatCurrency(parseFloat(costPerKm))}</p>
+              <p className="text-xs opacity-75 mt-1">Average across {formatNumber(totalDistance, 0)} km</p>
             </div>
             <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6">
               <p className="text-sm opacity-90">Cost Per Vehicle/Month</p>
-              <p className="text-3xl font-bold mt-2">${costPerVehiclePerMonth}</p>
+              <p className="text-3xl font-bold mt-2">{formatCurrency(parseFloat(costPerVehiclePerMonth))}</p>
               <p className="text-xs opacity-75 mt-1">Estimated monthly average</p>
             </div>
           </div>
@@ -444,15 +572,15 @@ export default function ReportingAnalyticsDashboard() {
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-600">Maintenance</span>
-                  <span className="text-lg font-bold text-slate-900">${totalMaintenanceCost.toLocaleString()}</span>
+                  <span className="text-lg font-bold text-slate-900">{formatCurrency(totalMaintenanceCost)}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-slate-600">Fuel</span>
-                  <span className="text-lg font-bold text-slate-900">${totalFuelCost.toLocaleString()}</span>
+                  <span className="text-lg font-bold text-slate-900">{formatCurrency(totalFuelCost)}</span>
                 </div>
                 <div className="flex justify-between items-center pt-3 border-t border-slate-200">
                   <span className="text-sm font-semibold text-slate-700">Total</span>
-                  <span className="text-xl font-bold text-red-600">${totalOperatingCost.toLocaleString()}</span>
+                  <span className="text-xl font-bold text-red-600">{formatCurrency(totalOperatingCost)}</span>
                 </div>
               </div>
             </div>
@@ -465,8 +593,19 @@ export default function ReportingAnalyticsDashboard() {
                     <span className="text-slate-600">Maintenance</span>
                     <span className="font-medium">{totalOperatingCost > 0 ? ((totalMaintenanceCost / totalOperatingCost) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: `${totalOperatingCost > 0 ? (totalMaintenanceCost / totalOperatingCost) * 100 : 0}%` }}></div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className={`bg-blue-600 h-2 rounded-full transition-all duration-300 ${
+                        totalOperatingCost === 0 ? 'w-0' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.95 ? 'w-full' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.75 ? 'w-11/12' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.66 ? 'w-2/3' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.50 ? 'w-1/2' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.33 ? 'w-1/3' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.25 ? 'w-1/4' :
+                        (totalMaintenanceCost / totalOperatingCost) >= 0.10 ? 'w-1/12' : 'w-0'
+                      }`}
+                    ></div>
                   </div>
                 </div>
                 <div>
@@ -474,8 +613,19 @@ export default function ReportingAnalyticsDashboard() {
                     <span className="text-slate-600">Fuel</span>
                     <span className="font-medium">{totalOperatingCost > 0 ? ((totalFuelCost / totalOperatingCost) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2">
-                    <div className="bg-amber-600 h-2 rounded-full" style={{ width: `${totalOperatingCost > 0 ? (totalFuelCost / totalOperatingCost) * 100 : 0}%` }}></div>
+                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className={`bg-amber-600 h-2 rounded-full transition-all duration-300 ${
+                        totalOperatingCost === 0 ? 'w-0' :
+                        (totalFuelCost / totalOperatingCost) >= 0.95 ? 'w-full' :
+                        (totalFuelCost / totalOperatingCost) >= 0.75 ? 'w-11/12' :
+                        (totalFuelCost / totalOperatingCost) >= 0.66 ? 'w-2/3' :
+                        (totalFuelCost / totalOperatingCost) >= 0.50 ? 'w-1/2' :
+                        (totalFuelCost / totalOperatingCost) >= 0.33 ? 'w-1/3' :
+                        (totalFuelCost / totalOperatingCost) >= 0.25 ? 'w-1/4' :
+                        (totalFuelCost / totalOperatingCost) >= 0.10 ? 'w-1/12' : 'w-0'
+                      }`}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -491,15 +641,15 @@ export default function ReportingAnalyticsDashboard() {
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
               <p className="text-sm text-slate-600">Total Fuel Cost</p>
-              <p className="text-3xl font-bold text-amber-900 mt-2">${totalFuelCost.toLocaleString()}</p>
+              <p className="text-3xl font-bold text-amber-900 mt-2">{formatCurrency(totalFuelCost)}</p>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
               <p className="text-sm text-slate-600">Total Liters</p>
-              <p className="text-3xl font-bold text-blue-900 mt-2">{totalLiters.toLocaleString()} L</p>
+              <p className="text-3xl font-bold text-blue-900 mt-2">{formatNumber(totalLiters, 2)} L</p>
             </div>
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
               <p className="text-sm text-slate-600">Avg Cost Per Liter</p>
-              <p className="text-3xl font-bold text-purple-900 mt-2">${averageCostPerLiter}</p>
+              <p className="text-3xl font-bold text-purple-900 mt-2">{formatCurrency(parseFloat(averageCostPerLiter))}</p>
             </div>
           </div>
         </div>
@@ -520,11 +670,11 @@ export default function ReportingAnalyticsDashboard() {
             </div>
             <div className="bg-blue-50 rounded-lg p-4">
               <p className="text-sm text-slate-600">Total Distance</p>
-              <p className="text-2xl font-bold text-blue-700 mt-1">{totalDistance.toLocaleString()} km</p>
+              <p className="text-2xl font-bold text-blue-700 mt-1">{formatNumber(totalDistance, 0)} km</p>
             </div>
             <div className="bg-purple-50 rounded-lg p-4">
               <p className="text-sm text-slate-600">Avg Distance</p>
-              <p className="text-2xl font-bold text-purple-700 mt-1">{averageTripDistance} km</p>
+              <p className="text-2xl font-bold text-purple-700 mt-1">{formatNumber(parseFloat(averageTripDistance), 1)} km</p>
             </div>
           </div>
         </div>
@@ -604,6 +754,8 @@ export default function ReportingAnalyticsDashboard() {
             </table>
           </div>
         </div>
+      )}
+        </>
       )}
     </div>
   );

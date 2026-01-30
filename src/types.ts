@@ -1,24 +1,47 @@
+// Vehicle Module - Defined per vehicle-module.md
 export interface Vehicle {
   id: string;
   plate_number: string;
+  conduction_number?: string; // Can be used as reference when plate_number doesn't exist yet
   make: string;
   model: string;
+  variant?: string;
   year: number;
   vin: string;
-  ownership_type: 'owned' | 'leased';
+  engine_number?: string;
+  fuel_capacity?: number;
+  ownership_type: 'Internal' | 'Leased'  | 'Leased to Own'| 'Shuttle';
   status: 'active' | 'maintenance' | 'disposed';
   insurance_expiry: string;
   registration_expiry: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
+// User Management - Based on public.users table
+export interface User {
+  id: string;
+  email: string;
+  full_name: string;
+  role: 'admin' | 'fleet_manager' | 'maintenance_manager' | 'driver' | 'viewer';
+  is_active: boolean;
+  session_id?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Driver Module - Simplified per types used in system
 export interface Driver {
   id: string;
   full_name: string;
   license_number: string;
   license_expiry: string;
   status: 'active' | 'suspended';
+  created_at?: string;
+  updated_at?: string;
 }
 
+// Maintenance Module - Simplified per maintenance-module.md
 export interface Maintenance {
   id: string;
   vehicle_id: string;
@@ -26,6 +49,9 @@ export interface Maintenance {
   scheduled_date: string;
   status: 'pending' | 'completed';
   cost?: number;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Trip Scheduling Module - Defined per trip-scheduling-module.md

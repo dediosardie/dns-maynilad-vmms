@@ -103,7 +103,7 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
             <option value="">Select Vehicle</option>
             {activeVehicles.map(vehicle => (
               <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.plate_number} - {vehicle.make} {vehicle.model}
+                {vehicle.plate_number}{vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - {vehicle.make} {vehicle.model}
               </option>
             ))}
           </select>

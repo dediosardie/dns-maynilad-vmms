@@ -4,7 +4,21 @@ import { FuelTransaction, Vehicle, Driver } from '../types';
 import FuelTransactionTable from './FuelTransactionTable';
 import FuelTransactionForm from './FuelTransactionForm';
 import Modal from './Modal';
+import { fuelService, vehicleService, driverService } from '../services/supabaseService';
+import { notificationService } from '../services/notificationService';
+import { auditLogService } from '../services/auditLogService';
+// Format number with thousand separators
+const formatNumber = (num: number, decimals: number = 2): string => {
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+};
 
+// Format currency with Php prefix
+const formatCurrency = (amount: number): string => {
+  return `Php ${formatNumber(amount, 2)}`;
+};
 export default function FuelTrackingModule() {
   const [transactions, setTransactions] = useState<FuelTransaction[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -14,7 +28,29 @@ export default function FuelTrackingModule() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    setIsLoading(false);
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [transactionsData, vehiclesData, driversData] = await Promise.all([
+          fuelService.getAllTransactions(),
+          vehicleService.getAll(),
+          driverService.getAll(),
+        ]);
+        setTransactions(transactionsData);
+        setVehicles(vehiclesData);
+        setDrivers(driversData);
+        console.log('Loaded fuel data:', {
+          transactions: transactionsData.length,
+          vehicles: vehiclesData.length,
+          drivers: driversData.length,
+        });
+      } catch (error) {
+        console.error('Error loading fuel transactions:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
     
     const handleVehiclesUpdate = ((event: CustomEvent) => {
       setVehicles(event.detail);
@@ -33,27 +69,82 @@ export default function FuelTrackingModule() {
     };
   }, []);
 
+  // Dispatch event when transactions update so other modules can react
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('fuelUpdated', { detail: transactions }));
+  }, [transactions]);
+
   // Action: Record Fuel Transaction (primary, submit)
-  const handleSaveTransaction = (transactionData: Omit<FuelTransaction, 'id' | 'created_at'>) => {
-    const newTransaction: FuelTransaction = {
-      ...transactionData,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-    };
-    setTransactions([...transactions, newTransaction]);
-    setIsModalOpen(false);
+  const handleSaveTransaction = async (transactionData: Omit<FuelTransaction, 'id' | 'created_at'>) => {
+    try {
+      const newTransaction = await fuelService.createTransaction(transactionData);
+      setTransactions([newTransaction, ...transactions]);
+      setIsModalOpen(false);
+      
+      notificationService.success(
+        'Fuel Transaction Recorded',
+        `${newTransaction.liters}L fuel recorded for vehicle`
+      );
+      await auditLogService.createLog(
+        'Fuel Transaction Created',
+        `Recorded ${newTransaction.liters}L fuel at ${newTransaction.cost_per_liter}/L`
+      );
+    } catch (error: any) {
+      console.error('Failed to save fuel transaction:', error);
+      notificationService.error('Failed to Record', error.message || 'Unable to save fuel transaction.');
+      alert(error.message || 'Failed to save fuel transaction. Please try again.');
+    }
   };
 
   // Action: Update Transaction (primary, submit)
-  const handleUpdateTransaction = (transaction: FuelTransaction) => {
-    setTransactions(transactions.map(t => t.id === transaction.id ? transaction : t));
-    setIsModalOpen(false);
-    setEditingTransaction(undefined);
+  const handleUpdateTransaction = async (transaction: FuelTransaction) => {
+    const oldTransaction = transactions.find(t => t.id === transaction.id);
+    try {
+      const { id, created_at, ...updateData } = transaction;
+      const updated = await fuelService.updateTransaction(id, updateData);
+      setTransactions(transactions.map(t => t.id === updated.id ? updated : t));
+      setIsModalOpen(false);
+      setEditingTransaction(undefined);
+      
+      notificationService.success(
+        'Fuel Transaction Updated',
+        'Transaction details have been updated'
+      );
+      await auditLogService.createLog(
+        'Fuel Transaction Updated',
+        `Updated fuel transaction (${updated.liters}L)`,
+        { before: oldTransaction, after: updated }
+      );
+    } catch (error: any) {
+      console.error('Failed to update fuel transaction:', error);
+      notificationService.error('Failed to Update', error.message || 'Unable to update transaction.');
+      alert(error.message || 'Failed to update fuel transaction. Please try again.');
+    }
   };
 
   // Action: Delete Transaction (danger, confirmation required)
-  const handleDeleteTransaction = (id: string) => {
-    setTransactions(transactions.filter(t => t.id !== id));
+  const handleDeleteTransaction = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this fuel transaction?')) {
+      return;
+    }
+    try {
+      const transaction = transactions.find(t => t.id === id);
+      await fuelService.deleteTransaction(id);
+      setTransactions(transactions.filter(t => t.id !== id));
+      
+      notificationService.info(
+        'Transaction Deleted',
+        'Fuel transaction has been removed'
+      );
+      await auditLogService.createLog(
+        'Fuel Transaction Deleted',
+        `Deleted fuel transaction (${transaction?.liters}L)`
+      );
+    } catch (error: any) {
+      console.error('Failed to delete fuel transaction:', error);
+      notificationService.error('Failed to Delete', error.message || 'Unable to delete transaction.');
+      alert(error.message || 'Failed to delete fuel transaction. Please try again.');
+    }
   };
 
   // Action: View Efficiency Report (secondary, opens analytics view)
@@ -103,7 +194,7 @@ export default function FuelTrackingModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Liters</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalLiters.toFixed(1)} L</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatNumber(totalLiters, 2)} L</p>
             </div>
             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -117,7 +208,7 @@ export default function FuelTrackingModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Cost</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">${totalCost.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalCost)}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,7 +222,7 @@ export default function FuelTrackingModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Avg Cost/Liter</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">${avgCostPerLiter.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(avgCostPerLiter)}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

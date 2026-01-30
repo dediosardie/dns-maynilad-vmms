@@ -2,6 +2,10 @@
 import { useState, useEffect } from 'react';
 import { DisposalRequest, DisposalAuction, Bid, Vehicle } from '../types';
 import Modal from './Modal';
+import { disposalService, vehicleService } from '../services/supabaseService';
+import { supabase } from '../supabaseClient';
+import { notificationService } from '../services/notificationService';
+import { auditLogService } from '../services/auditLogService';
 
 export default function VehicleDisposalModule() {
   const [disposalRequests, setDisposalRequests] = useState<DisposalRequest[]>([]);
@@ -13,8 +17,45 @@ export default function VehicleDisposalModule() {
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<DisposalRequest | undefined>();
   const [selectedAuction, setSelectedAuction] = useState<DisposalAuction | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [requestsData, vehiclesData] = await Promise.all([
+          disposalService.getAllRequests(),
+          vehicleService.getAll(),
+        ]);
+        setDisposalRequests(requestsData);
+        setVehicles(vehiclesData);
+        console.log('Loaded disposal requests:', requestsData.length, 'vehicles:', vehiclesData.length);
+        
+        // Load auctions and bids for all requests
+        const allAuctions: DisposalAuction[] = [];
+        const allBids: Bid[] = [];
+        
+        for (const request of requestsData) {
+          const auctionsForRequest = await disposalService.getAuctionsByDisposal(request.id);
+          allAuctions.push(...auctionsForRequest);
+          
+          for (const auction of auctionsForRequest) {
+            const bidsForAuction = await disposalService.getBidsByAuction(auction.id);
+            allBids.push(...bidsForAuction);
+          }
+        }
+        
+        setAuctions(allAuctions);
+        setBids(allBids);
+        console.log('Loaded auctions:', allAuctions.length, 'bids:', allBids.length);
+      } catch (error) {
+        console.error('Error loading disposal data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+
     const handleVehiclesUpdate = ((event: CustomEvent) => setVehicles(event.detail)) as EventListener;
     window.addEventListener('vehiclesUpdated', handleVehiclesUpdate);
     return () => window.removeEventListener('vehiclesUpdated', handleVehiclesUpdate);
@@ -23,8 +64,9 @@ export default function VehicleDisposalModule() {
   // Disposal Request Form - per markdown Disposal Request Form section (9 fields)
   const DisposalRequestForm = ({ initialData, onSubmit, onClose }: any) => {
     const [formData, setFormData] = useState({
+      disposal_number: initialData?.disposal_number || `DSP-${Date.now()}`,
       vehicle_id: initialData?.vehicle_id || '',
-      requested_by: initialData?.requested_by || 'current_user_id',
+      requested_by: initialData?.requested_by || '',
       disposal_reason: initialData?.disposal_reason || 'end_of_life',
       recommended_method: initialData?.recommended_method || 'auction',
       condition_rating: initialData?.condition_rating || 'good',
@@ -33,14 +75,43 @@ export default function VehicleDisposalModule() {
       request_date: initialData?.request_date || new Date().toISOString().split('T')[0],
     });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    useEffect(() => {
+      const getCurrentUser = async () => {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user && !formData.requested_by) {
+          setFormData(prev => ({ ...prev, requested_by: user.id }));
+        }
+      };
+      getCurrentUser();
+    }, []);
+
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
-      onSubmit(formData);
+      
+      // Ensure we have the current user ID
+      if (!formData.requested_by) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          onSubmit({ ...formData, requested_by: user.id });
+        } else {
+          alert('Unable to get current user. Please try logging in again.');
+        }
+      } else {
+        onSubmit(formData);
+      }
     };
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
+          {/* Disposal Number (text, auto-generated) */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Disposal Number
+            </label>
+            <input type="text" value={formData.disposal_number} onChange={(e) => setFormData({...formData, disposal_number: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-50 focus:ring-2 focus:ring-red-500" />
+          </div>
+
           {/* Vehicle (select, required) */}
           <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -49,7 +120,7 @@ export default function VehicleDisposalModule() {
             <select value={formData.vehicle_id} onChange={(e) => setFormData({...formData, vehicle_id: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
               <option value="">Select Vehicle</option>
               {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.plate_number} - {v.make} {v.model} ({v.year})</option>
+                <option key={v.id} value={v.id}>{v.plate_number}{v.conduction_number ? ` (${v.conduction_number})` : ''} - {v.make} {v.model} ({v.year})</option>
               ))}
             </select>
           </div>
@@ -139,6 +210,8 @@ export default function VehicleDisposalModule() {
       reserve_price: request.estimated_value * 0.85,
       start_date: new Date().toISOString().split('T')[0],
       end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      total_bids: 0,
+      auction_status: 'scheduled' as 'scheduled' | 'active' | 'closed' | 'awarded' | 'cancelled',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -215,14 +288,17 @@ export default function VehicleDisposalModule() {
   // Bid Submission Form - per markdown Bid Submission Form section (6 fields)
   const BidSubmissionForm = ({ auction, onSubmit, onClose }: any) => {
     const currentHighestBid = bids.filter(b => b.auction_id === auction.id).reduce((max, b) => Math.max(max, b.bid_amount), 0);
-    const minimumBid = Math.max(auction.starting_price, currentHighestBid + auction.bid_increment);
+    const defaultBidIncrement = 1000; // Default bid increment
+    const minimumBid = Math.max(auction.starting_price, currentHighestBid + defaultBidIncrement);
 
     const [formData, setFormData] = useState({
       auction_id: auction.id,
       bidder_name: '',
-      bidder_email: '',
-      bidder_phone: '',
+      bidder_contact: '',
       bid_amount: minimumBid,
+      bid_date: new Date().toISOString(),
+      is_valid: true,
+      notes: '',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -253,20 +329,12 @@ export default function VehicleDisposalModule() {
             <input type="text" value={formData.bidder_name} onChange={(e) => setFormData({...formData, bidder_name: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
           </div>
 
-          {/* Bidder Email (email, required) */}
-          <div>
+          {/* Bidder Contact (text, required) */}
+          <div className="col-span-2">
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Bidder Email <span className="text-red-600">*</span>
+              Bidder Contact (Email/Phone) <span className="text-red-600">*</span>
             </label>
-            <input type="email" value={formData.bidder_email} onChange={(e) => setFormData({...formData, bidder_email: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
-          </div>
-
-          {/* Bidder Phone (tel, required) */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Bidder Phone <span className="text-red-600">*</span>
-            </label>
-            <input type="tel" value={formData.bidder_phone} onChange={(e) => setFormData({...formData, bidder_phone: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <input type="text" value={formData.bidder_contact} onChange={(e) => setFormData({...formData, bidder_contact: e.target.value})} required placeholder="email@example.com or +63 XXX XXX XXXX" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
           </div>
 
           {/* Bid Amount (number, required, >= minimum bid) */}
@@ -275,6 +343,14 @@ export default function VehicleDisposalModule() {
               Bid Amount <span className="text-red-600">*</span>
             </label>
             <input type="number" value={formData.bid_amount} onChange={(e) => setFormData({...formData, bid_amount: parseFloat(e.target.value)})} required step="0.01" min={minimumBid} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+          </div>
+
+          {/* Notes (textarea, optional) */}
+          <div className="col-span-2">
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Notes (Optional)
+            </label>
+            <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" placeholder="Any additional information..." />
           </div>
         </div>
 
@@ -288,70 +364,108 @@ export default function VehicleDisposalModule() {
   };
 
   // Action: Submit Request (primary) - per markdown
-  const handleSaveDisposalRequest = (requestData: any) => {
-    // Disposal requests >$10,000 require approval per business rules
-    const needsApproval = requestData.estimated_value > 10000;
-    const newRequest: DisposalRequest = {
-      ...requestData,
-      id: crypto.randomUUID(),
-      disposal_number: `DISP-${Date.now()}`,
-      approval_status: needsApproval ? 'pending' : 'approved',
-      status: needsApproval ? 'pending_approval' : 'listed',
-      approved_by: needsApproval ? undefined : 'auto_approved',
-      approval_date: needsApproval ? undefined : new Date().toISOString(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setDisposalRequests([...disposalRequests, newRequest]);
-    setIsRequestModalOpen(false);
+  const handleSaveDisposalRequest = async (requestData: any) => {
+    try {
+      const newRequest = await disposalService.createRequest(requestData);
+      setDisposalRequests([newRequest, ...disposalRequests]);
+      setIsRequestModalOpen(false);
+      
+      notificationService.success(
+        'Disposal Request Created',
+        `Disposal request ${newRequest.disposal_number} has been submitted`
+      );
+      await auditLogService.createLog(
+        'Disposal Request Created',
+        `Created disposal request ${newRequest.disposal_number} for vehicle ${requestData.vehicle_id}`
+      );
+    } catch (error: any) {
+      console.error('Failed to save disposal request:', error);
+      notificationService.error('Failed to Create Request', error.message || 'Unable to save disposal request.');
+      alert(error.message || 'Failed to save disposal request. Please try again.');
+    }
   };
 
   // Action: Approve Request (success) - per markdown
-  const handleApproveRequest = (id: string) => {
-    setDisposalRequests(disposalRequests.map(r =>
-      r.id === id
-        ? { ...r, approval_status: 'approved', approved_by: 'current_user_id', approval_date: new Date().toISOString(), status: 'listed', updated_at: new Date().toISOString() }
-        : r
-    ));
+  const handleApproveRequest = async (id: string) => {
+    try {
+      const request = disposalRequests.find(r => r.id === id);
+      const updated = await disposalService.updateRequest(id, {
+        approval_status: 'approved',
+        status: 'listed',
+      });
+      setDisposalRequests(disposalRequests.map(r => r.id === updated.id ? updated : r));
+      
+      notificationService.success(
+        'Request Approved',
+        `Disposal request ${request?.disposal_number} has been approved`
+      );
+      await auditLogService.createLog(
+        'Disposal Request Approved',
+        `Approved disposal request ${request?.disposal_number}`
+      );
+    } catch (error: any) {
+      console.error('Failed to approve disposal request:', error);
+      notificationService.error('Failed to Approve', error.message || 'Unable to approve request.');
+      alert(error.message || 'Failed to approve disposal request. Please try again.');
+    }
   };
 
   // Action: Create Auction (primary) - per markdown
-  const handleCreateAuction = (auctionData: any) => {
-    const newAuction: DisposalAuction = {
-      ...auctionData,
-      id: crypto.randomUUID(),
-      auction_status: 'scheduled',
-      total_bids: 0,
-    };
-    setAuctions([...auctions, newAuction]);
-    // Update disposal request status
-    setDisposalRequests(disposalRequests.map(r =>
-      r.id === auctionData.disposal_id
-        ? { ...r, status: 'bidding_open', updated_at: new Date().toISOString() }
-        : r
-    ));
-    setIsAuctionModalOpen(false);
-    setSelectedRequest(undefined);
+  const handleCreateAuction = async (auctionData: any) => {
+    try {
+      const newAuction = await disposalService.createAuction(auctionData);
+      setAuctions([newAuction, ...auctions]);
+      // Update disposal request status
+      const updated = await disposalService.updateRequest(auctionData.disposal_id, {
+        status: 'bidding_open',
+      });
+      setDisposalRequests(disposalRequests.map(r => r.id === updated.id ? updated : r));
+      setIsAuctionModalOpen(false);
+      setSelectedRequest(undefined);
+      
+      notificationService.success(
+        'Auction Created',
+        `${newAuction.auction_type} auction created with starting price $${newAuction.starting_price}`
+      );
+      await auditLogService.createLog(
+        'Auction Created',
+        `Created ${newAuction.auction_type} auction for disposal request`
+      );
+    } catch (error: any) {
+      console.error('Failed to create auction:', error);
+      notificationService.error('Failed to Create Auction', error.message || 'Unable to create auction.');
+      alert(error.message || 'Failed to create auction. Please try again.');
+    }
   };
 
   // Action: Submit Bid (primary) - per markdown
-  const handleSubmitBid = (bidData: any) => {
-    const newBid: Bid = {
-      ...bidData,
-      id: crypto.randomUUID(),
-      bidder_contact: bidData.bidder_email,
-      bid_date: new Date().toISOString(),
-      is_valid: true,
-    };
-    setBids([...bids, newBid]);
-    // Update auction total_bids and current_highest_bid
-    setAuctions(auctions.map(a =>
-      a.id === bidData.auction_id
-        ? { ...a, total_bids: (a.total_bids || 0) + 1, current_highest_bid: bidData.bid_amount }
-        : a
-    ));
-    setIsBidModalOpen(false);
-    setSelectedAuction(undefined);
+  const handleSubmitBid = async (bidData: any) => {
+    try {
+      const newBid = await disposalService.placeBid(bidData);
+      setBids([newBid, ...bids]);
+      // Reload auction data to get updated bid count
+      const auctionBids = await disposalService.getBidsByAuction(bidData.auction_id);
+      setAuctions(auctions.map(a =>
+        a.id === bidData.auction_id
+          ? { ...a, total_bids: auctionBids.length, current_highest_bid: Math.max(...auctionBids.map(b => b.bid_amount)) }
+          : a
+      ));
+      setIsBidModalOpen(false);
+      setSelectedAuction(undefined);
+      
+      notificationService.success(
+        'Bid Submitted',
+        `Bid of $${newBid.bid_amount} has been placed successfully`
+      );
+      await auditLogService.createLog(
+        'Bid Submitted',
+        `Placed bid of $${newBid.bid_amount} by ${newBid.bidder_name}`
+      );
+    } catch (error: any) {
+      console.error('Failed to submit bid:', error);
+      notificationService.error('Failed to Submit Bid', error.message || 'Unable to submit bid.');
+      alert(error.message || 'Failed to submit bid. Please try again.');
+    }
   };
 
   // Action: Close Auction (success) - per markdown
@@ -394,6 +508,12 @@ export default function VehicleDisposalModule() {
 
   return (
     <div className="space-y-6">
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        </div>
+      ) : (
+        <>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -499,7 +619,7 @@ export default function VehicleDisposalModule() {
                     return (
                       <tr key={request.id} className="hover:bg-slate-50">
                         <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                          {vehicle ? `${vehicle.plate_number} - ${vehicle.make} ${vehicle.model}` : 'Unknown'}
+                          {vehicle ? `${vehicle.plate_number}${vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - ${vehicle.make} ${vehicle.model}` : 'Unknown'}
                         </td>
                         <td className="px-4 py-3 text-sm text-slate-700 capitalize">{request.disposal_reason.replace('_', ' ')}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">${request.estimated_value.toLocaleString()}</td>
@@ -613,6 +733,8 @@ export default function VehicleDisposalModule() {
         <Modal isOpen={isBidModalOpen} onClose={() => { setIsBidModalOpen(false); setSelectedAuction(undefined); }} title="Place Bid">
           <BidSubmissionForm auction={selectedAuction} onSubmit={handleSubmitBid} onClose={() => { setIsBidModalOpen(false); setSelectedAuction(undefined); }} />
         </Modal>
+      )}
+        </>
       )}
     </div>
   );

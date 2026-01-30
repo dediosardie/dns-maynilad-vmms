@@ -25,7 +25,7 @@ export default function TripTable({
   // Helper functions to display related data
   const getVehicleInfo = (vehicleId: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle ? `${vehicle.plate_number}` : 'N/A';
+    return vehicle ? `${vehicle.plate_number}${vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''}` : 'N/A';
   };
 
   const getDriverInfo = (driverId: string) => {

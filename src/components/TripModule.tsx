@@ -4,6 +4,10 @@ import { Trip, Vehicle, Driver } from '../types';
 import TripTable from './TripTable';
 import TripForm from './TripForm';
 import Modal from './Modal';
+import { vehicleStorage, driverStorage } from '../storage';
+import { tripService } from '../services/supabaseService';
+import { notificationService } from '../services/notificationService';
+import { auditLogService } from '../services/auditLogService';
 
 export default function TripModule() {
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -14,10 +18,39 @@ export default function TripModule() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
-    // Load data (simulated - would integrate with storage)
-    setIsLoading(false);
-    
-    // Listen for updates from other modules
+    // Load trips, vehicles, and drivers from storage on mount
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [tripsData, vehiclesData, driversData] = await Promise.all([
+          tripService.getAll(),
+          vehicleStorage.getAll(),
+          driverStorage.getAll(),
+        ]);
+        setTrips(tripsData);
+        setVehicles(vehiclesData);
+        setDrivers(driversData);
+        console.log('Loaded data for trip module:', {
+          trips: tripsData.length,
+          vehicles: vehiclesData.length,
+          drivers: driversData.length,
+        });
+      } catch (error) {
+        console.error('Error loading trip data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  // Dispatch event when trips update so other modules can react
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('tripsUpdated', { detail: trips }));
+  }, [trips]);
+
+  // Listen for updates from other modules
+  useEffect(() => {
     const handleVehiclesUpdate = ((event: CustomEvent) => {
       setVehicles(event.detail);
     }) as EventListener;
@@ -36,59 +69,117 @@ export default function TripModule() {
   }, []);
 
   // Action: Create Trip (primary, submit)
-  const handleSaveTrip = (tripData: Omit<Trip, 'id' | 'created_at' | 'updated_at'>) => {
-    const newTrip: Trip = {
-      ...tripData,
-      id: crypto.randomUUID(),
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setTrips([...trips, newTrip]);
-    setIsModalOpen(false);
+  const handleSaveTrip = async (tripData: Omit<Trip, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const newTrip = await tripService.create(tripData);
+      setTrips([newTrip, ...trips]);
+      setIsModalOpen(false);
+      
+      notificationService.success(
+        'Trip Scheduled',
+        `Trip to ${newTrip.destination} has been scheduled`
+      );
+      await auditLogService.createLog(
+        'Trip Created',
+        `Scheduled trip from ${newTrip.origin} to ${newTrip.destination}`
+      );
+    } catch (error: any) {
+      console.error('Failed to save trip:', error);
+      notificationService.error('Failed to Schedule Trip', error.message || 'Unable to schedule trip.');
+      alert(error.message || 'Failed to save trip. Please try again.');
+    }
   };
 
   // Action: Update Trip (primary, submit)
-  const handleUpdateTrip = (trip: Trip) => {
-    setTrips(trips.map(t => t.id === trip.id ? trip : t));
-    setIsModalOpen(false);
-    setEditingTrip(undefined);
+  const handleUpdateTrip = async (trip: Trip) => {
+    try {
+      const { id, created_at, updated_at, ...updateData } = trip;
+      const updated = await tripService.update(id, updateData);
+      setTrips(trips.map(t => t.id === updated.id ? updated : t));
+      setIsModalOpen(false);
+      setEditingTrip(undefined);
+      
+      notificationService.success(
+        'Trip Updated',
+        `Trip to ${updated.destination} has been updated`
+      );
+      await auditLogService.createLog(
+        'Trip Updated',
+        `Updated trip from ${updated.origin} to ${updated.destination}`,
+        { before: trip, after: updated }
+      );
+    } catch (error: any) {
+      console.error('Failed to update trip:', error);
+      notificationService.error('Failed to Update Trip', error.message || 'Unable to update trip.');
+      alert(error.message || 'Failed to update trip. Please try again.');
+    }
   };
 
   // Action: Start Trip (success, updates status to in_progress, records actual_departure)
-  const handleStartTrip = (id: string) => {
-    setTrips(trips.map(t => 
-      t.id === id 
-        ? { 
-            ...t, 
-            status: 'in_progress', 
-            actual_departure: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          } 
-        : t
-    ));
+  const handleStartTrip = async (id: string) => {
+    try {
+      const updated = await tripService.startTrip(id);
+      setTrips(trips.map(t => t.id === updated.id ? updated : t));
+      
+      notificationService.info(
+        'Trip Started',
+        `Trip to ${updated.destination} is now in progress`
+      );
+      await auditLogService.createLog(
+        'Trip Started',
+        `Started trip to ${updated.destination}`
+      );
+    } catch (error: any) {
+      console.error('Failed to start trip:', error);
+      notificationService.error('Failed to Start Trip', error.message || 'Unable to start trip.');
+      alert(error.message || 'Failed to start trip. Please try again.');
+    }
   };
 
   // Action: Complete Trip (success, updates status to completed, records actual_arrival)
-  const handleCompleteTrip = (id: string) => {
-    setTrips(trips.map(t => 
-      t.id === id 
-        ? { 
-            ...t, 
-            status: 'completed', 
-            actual_arrival: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          } 
-        : t
-    ));
+  const handleCompleteTrip = async (id: string) => {
+    try {
+      const updated = await tripService.completeTrip(id);
+      setTrips(trips.map(t => t.id === updated.id ? updated : t));
+      
+      notificationService.success(
+        'Trip Completed',
+        `Trip to ${updated.destination} has been completed successfully`
+      );
+      await auditLogService.createLog(
+        'Trip Completed',
+        `Completed trip to ${updated.destination}`
+      );
+    } catch (error: any) {
+      console.error('Failed to complete trip:', error);
+      notificationService.error('Failed to Complete Trip', error.message || 'Unable to complete trip.');
+      alert(error.message || 'Failed to complete trip. Please try again.');
+    }
   };
 
   // Action: Cancel Trip (danger, confirmation required)
-  const handleCancelTrip = (id: string) => {
-    setTrips(trips.map(t => 
-      t.id === id 
-        ? { ...t, status: 'cancelled', updated_at: new Date().toISOString() } 
-        : t
-    ));
+  const handleCancelTrip = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this trip?')) {
+      return;
+    }
+    try {
+      const trip = trips.find(t => t.id === id);
+      const updated = await tripService.cancelTrip(id);
+      setTrips(trips.map(t => t.id === updated.id ? updated : t));
+      
+      notificationService.warning(
+        'Trip Cancelled',
+        `Trip to ${updated.destination} has been cancelled`
+      );
+      await auditLogService.createLog(
+        'Trip Cancelled',
+        `Cancelled trip to ${trip?.destination}`
+      );
+    } catch (error: any) {
+      console.error('Failed to cancel trip:', error);
+      notificationService.error('Failed to Cancel Trip', error.message || 'Unable to cancel trip.');
+      alert(error.message || 'Failed to cancel trip. Please try again.');
+    }
   };
 
   // Action: View Route Map (secondary, displays visual route)

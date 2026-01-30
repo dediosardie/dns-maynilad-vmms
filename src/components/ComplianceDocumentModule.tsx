@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { Document, ComplianceAlert, Vehicle, Driver } from '../types';
 import Modal from './Modal';
+import { documentService, complianceService, vehicleService, driverService } from '../services/supabaseService';
 
 export default function ComplianceDocumentModule() {
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -9,18 +10,37 @@ export default function ComplianceDocumentModule() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [editingDocument] = useState<Document | undefined>();
+  const [editingDocument, setEditingDocument] = useState<Document | undefined>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
 
   useEffect(() => {
-    const handleVehiclesUpdate = ((event: CustomEvent) => setVehicles(event.detail)) as EventListener;
-    const handleDriversUpdate = ((event: CustomEvent) => setDrivers(event.detail)) as EventListener;
-    window.addEventListener('vehiclesUpdated', handleVehiclesUpdate);
-    window.addEventListener('driversUpdated', handleDriversUpdate);
-    return () => {
-      window.removeEventListener('vehiclesUpdated', handleVehiclesUpdate);
-      window.removeEventListener('driversUpdated', handleDriversUpdate);
-    };
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const [docsData, alertsData, vehiclesData, driversData] = await Promise.all([
+        documentService.getAll(),
+        complianceService.getAlerts(),
+        vehicleService.getAll(),
+        driverService.getAll()
+      ]);
+      setDocuments(docsData);
+      setAlerts(alertsData);
+      setVehicles(vehiclesData);
+      setDrivers(driversData);
+    } catch (error: any) {
+      console.error('Error loading data:', error);
+      setError('Failed to load data. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Document Upload Form - per markdown Document Upload Form section
   const DocumentForm = ({ initialData, onSubmit, onClose }: any) => {
@@ -88,7 +108,9 @@ export default function ComplianceDocumentModule() {
               <option value="">Select {formData.related_entity_type}</option>
               {availableEntities.map(entity => (
                 <option key={entity.id} value={entity.id}>
-                  {'plate_number' in entity ? `${entity.plate_number} - ${entity.make} ${entity.model}` : entity.full_name}
+                  {'plate_number' in entity 
+                    ? `${entity.plate_number}${entity.conduction_number ? ` (${entity.conduction_number})` : ''} - ${entity.make} ${entity.model}` 
+                    : entity.full_name}
                 </option>
               ))}
             </select>
@@ -173,61 +195,89 @@ export default function ComplianceDocumentModule() {
   };
 
   // Action: Upload Document (primary, submit) - per markdown
-  const handleSaveDocument = (documentData: any) => {
-    // Calculate status based on expiry date per business rules
-    let status: 'active' | 'expired' | 'expiring_soon' | 'revoked' = 'active';
-    if (documentData.expiry_date) {
-      const today = new Date();
-      const expiryDate = new Date(documentData.expiry_date);
-      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (daysUntilExpiry < 0) {
-        status = 'expired';
-      } else if (daysUntilExpiry <= documentData.reminder_days) {
-        status = 'expiring_soon';
+  const handleSaveDocument = async (documentData: any) => {
+    try {
+      // Calculate status based on expiry date per business rules
+      let status: 'active' | 'expired' | 'expiring_soon' | 'revoked' = 'active';
+      if (documentData.expiry_date) {
+        const today = new Date();
+        const expiryDate = new Date(documentData.expiry_date);
+        const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        if (daysUntilExpiry < 0) {
+          status = 'expired';
+        } else if (daysUntilExpiry <= documentData.reminder_days) {
+          status = 'expiring_soon';
+        }
       }
-    }
 
-    const newDocument: Document = {
-      ...documentData,
-      id: crypto.randomUUID(),
-      status,
-      uploaded_by: 'current_user_id',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setDocuments([...documents, newDocument]);
-    setIsUploadModalOpen(false);
+      const newDocument = await documentService.create({
+        ...documentData,
+        status,
+        uploaded_by: 'current_user_id' // TODO: Get from auth context
+      });
+      
+      setDocuments([newDocument, ...documents]);
+      setIsUploadModalOpen(false);
+      await loadData(); // Reload to get fresh alerts
+    } catch (error: any) {
+      console.error('Failed to save document:', error);
+      alert(error.message || 'Failed to save document. Please try again.');
+    }
+  };
+
+  // Action: Update Document Details (primary, submit)
+  const handleUpdateDocument = async (documentData: any) => {
+    if (!editingDocument) return;
     
-    // Create alert if expiring soon or expired per business rules
-    if (status === 'expiring_soon' || status === 'expired') {
-      const newAlert: ComplianceAlert = {
-        id: crypto.randomUUID(),
-        document_id: newDocument.id,
-        alert_type: status === 'expired' ? 'expired' : 'expiring_soon',
-        alert_date: new Date().toISOString(),
-        days_until_expiry: documentData.expiry_date ? Math.ceil((new Date(documentData.expiry_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : undefined,
-        is_acknowledged: false,
-      };
-      setAlerts([...alerts, newAlert]);
+    try {
+      const updated = await documentService.update(editingDocument.id, documentData);
+      setDocuments(documents.map(d => d.id === updated.id ? updated : d));
+      setIsUploadModalOpen(false);
+      setEditingDocument(undefined);
+    } catch (error: any) {
+      console.error('Failed to update document:', error);
+      alert(error.message || 'Failed to update document. Please try again.');
     }
   };
 
-  // Action: Delete Document (danger, confirmation required) - per markdown
-  const handleDeleteDocument = (id: string) => {
-    if (window.confirm('Are you sure you want to delete this document?')) {
+  // Action: Delete Document (danger, confirmation required)
+  const handleDeleteDocument = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+      return;
+    }
+    
+    try {
+      await documentService.delete(id);
       setDocuments(documents.filter(d => d.id !== id));
+    } catch (error: any) {
+      console.error('Failed to delete document:', error);
+      alert(error.message || 'Failed to delete document. Please try again.');
     }
   };
 
-  // Action: Acknowledge Alert (success, dismisses alert) - per markdown
-  const handleAcknowledgeAlert = (alertId: string) => {
-    setAlerts(alerts.map(a => 
-      a.id === alertId 
-        ? { ...a, is_acknowledged: true, acknowledged_by: 'current_user_id', acknowledged_at: new Date().toISOString() }
-        : a
-    ));
+  // Action: Acknowledge Alert (success, dismisses alert)
+  const handleAcknowledgeAlert = async (alertId: string) => {
+    try {
+      await complianceService.acknowledgeAlert(alertId, 'current_user_id');
+      setAlerts(alerts.map(a => a.id === alertId ? {...a, is_acknowledged: true} : a));
+    } catch (error: any) {
+      console.error('Failed to acknowledge alert:', error);
+      alert(error.message || 'Failed to acknowledge alert. Please try again.');
+    }
   };
+
+  const handleEditDocument = (document: Document) => {
+    setEditingDocument(document);
+    setIsUploadModalOpen(true);
+  };
+
+  // Filter documents
+  const filteredDocuments = documents.filter(doc => {
+    if (filterType !== 'all' && doc.document_type !== filterType) return false;
+    if (filterStatus !== 'all' && doc.status !== filterStatus) return false;
+    return true;
+  });
 
   // Calculate Compliance Dashboard Metrics per markdown
   const totalActiveDocuments = documents.filter(d => d.status === 'active').length;
@@ -238,6 +288,11 @@ export default function ComplianceDocumentModule() {
   }).length;
   const expiredDocuments = documents.filter(d => d.status === 'expired').length;
   const complianceRate = documents.length > 0 ? ((totalActiveDocuments / documents.length) * 100).toFixed(1) : '0';
+
+  const handleAddDocument = () => {
+    setEditingDocument(undefined);
+    setIsUploadModalOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -347,7 +402,7 @@ export default function ComplianceDocumentModule() {
                 Export Report
               </button>
               {/* Action: Upload Document (primary) */}
-              <button onClick={() => setIsUploadModalOpen(true)} className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+              <button onClick={handleAddDocument} className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
@@ -355,14 +410,65 @@ export default function ComplianceDocumentModule() {
               </button>
             </div>
           </div>
+
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4 mt-4">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Document Type</label>
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="all">All Types</option>
+                <option value="registration">Registration</option>
+                <option value="insurance">Insurance</option>
+                <option value="permit">Permit</option>
+                <option value="license">License</option>
+                <option value="inspection">Inspection</option>
+                <option value="contract">Contract</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="expiring_soon">Expiring Soon</option>
+                <option value="expired">Expired</option>
+                <option value="revoked">Revoked</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        {/* Documents Table - per Document Table definition in markdown */}
-        <div className="p-6">
-          {documents.length === 0 ? (
+        {/* Error Display */}
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="flex flex-col items-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+              <p className="text-slate-600 mt-4">Loading documents...</p>
+            </div>
+          </div>
+        ) : (
+          /* Documents Table - per Document Table definition in markdown */
+          <div className="p-6">
+          {filteredDocuments.length === 0 ? (
             <div className="text-center py-12">
-              <h3 className="text-lg font-medium text-slate-900 mb-1">No documents uploaded</h3>
-              <p className="text-slate-600">Start managing compliance by uploading documents</p>
+              <h3 className="text-lg font-medium text-slate-900 mb-1">No documents found</h3>
+              <p className="text-slate-600">Try adjusting your filters or upload new documents</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -380,7 +486,7 @@ export default function ComplianceDocumentModule() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
-                  {documents.map((doc) => (
+                  {filteredDocuments.map((doc) => (
                     <tr key={doc.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm font-medium text-slate-900">{doc.document_name}</td>
                       <td className="px-4 py-3 text-sm text-slate-700 capitalize">{doc.document_type}</td>
@@ -402,8 +508,8 @@ export default function ComplianceDocumentModule() {
                       <td className="px-4 py-3 text-right text-sm space-x-2">
                         {/* Actions per markdown */}
                         <button className="text-blue-600 hover:text-blue-900">Download</button>
-                        <button className="text-red-600 hover:text-red-900">View</button>
-                        <button onClick={() => handleDeleteDocument(doc.id)} className="text-slate-600 hover:text-slate-900">Delete</button>
+                        <button onClick={() => handleEditDocument(doc)} className="text-slate-600 hover:text-slate-900">Edit</button>
+                        <button onClick={() => handleDeleteDocument(doc.id)} className="text-red-600 hover:text-red-900">Delete</button>
                       </td>
                     </tr>
                   ))}
@@ -412,11 +518,16 @@ export default function ComplianceDocumentModule() {
             </div>
           )}
         </div>
+        )}
       </div>
 
       {/* Modal for Upload Document */}
-      <Modal isOpen={isUploadModalOpen} onClose={() => setIsUploadModalOpen(false)} title={editingDocument ? 'Update Document' : 'Upload Document'}>
-        <DocumentForm initialData={editingDocument} onSubmit={handleSaveDocument} onClose={() => setIsUploadModalOpen(false)} />
+      <Modal isOpen={isUploadModalOpen} onClose={() => { setIsUploadModalOpen(false); setEditingDocument(undefined); }} title={editingDocument ? 'Update Document' : 'Upload Document'}>
+        <DocumentForm 
+          initialData={editingDocument} 
+          onSubmit={editingDocument ? handleUpdateDocument : handleSaveDocument} 
+          onClose={() => { setIsUploadModalOpen(false); setEditingDocument(undefined); }} 
+        />
       </Modal>
     </div>
   );

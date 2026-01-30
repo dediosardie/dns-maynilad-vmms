@@ -4,6 +4,8 @@ import DriverTable from './DriverTable';
 import DriverForm from './DriverForm';
 import Modal from './Modal';
 import { driverStorage } from '../storage';
+import { notificationService } from '../services/notificationService';
+import { auditLogService } from '../services/auditLogService';
 
 export default function DriverModule() {
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -28,6 +30,11 @@ export default function DriverModule() {
     loadDrivers();
   }, []);
 
+  // Dispatch event when drivers update so other modules can react
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('driversUpdated', { detail: drivers }));
+  }, [drivers]);
+
   const handleSaveDriver = async (driverData: Omit<Driver, 'id'>) => {
     const newDriver: Driver = {
       ...driverData,
@@ -37,32 +44,65 @@ export default function DriverModule() {
       await driverStorage.save(newDriver);
       setDrivers([...drivers, newDriver]);
       setIsModalOpen(false);
+      
+      notificationService.success(
+        'Driver Added',
+        `${newDriver.full_name} has been successfully added`
+      );
+      await auditLogService.createLog(
+        'Driver Created',
+        `Added driver ${newDriver.full_name} (License: ${newDriver.license_number})`
+      );
     } catch (error) {
       console.error('Failed to save driver:', error);
+      notificationService.error('Failed to Add Driver', 'Unable to add driver. Please try again.');
       alert('Failed to save driver. Please try again.');
     }
   };
 
   const handleUpdateDriver = async (driver: Driver) => {
+    const oldDriver = drivers.find(d => d.id === driver.id);
     try {
       await driverStorage.update(driver);
       setDrivers(drivers.map(d => d.id === driver.id ? driver : d));
       setEditingDriver(undefined);
       setIsModalOpen(false);
+      
+      notificationService.success(
+        'Driver Updated',
+        `${driver.full_name}'s information has been updated`
+      );
+      await auditLogService.createLog(
+        'Driver Updated',
+        `Updated driver ${driver.full_name} (License: ${driver.license_number})`,
+        { before: oldDriver, after: driver }
+      );
     } catch (error) {
       console.error('Failed to update driver:', error);
+      notificationService.error('Failed to Update Driver', 'Unable to update driver. Please try again.');
       alert('Failed to update driver. Please try again.');
     }
   };
 
   const handleSuspendDriver = async (id: string) => {
     try {
+      const driver = drivers.find(d => d.id === id);
       await driverStorage.suspend(id);
       setDrivers(drivers.map(d => 
         d.id === id ? { ...d, status: 'suspended' as const } : d
       ));
+      
+      notificationService.warning(
+        'Driver Suspended',
+        `${driver?.full_name || 'Driver'} has been suspended`
+      );
+      await auditLogService.createLog(
+        'Driver Suspended',
+        `Suspended driver ${driver?.full_name} (License: ${driver?.license_number})`
+      );
     } catch (error) {
       console.error('Failed to suspend driver:', error);
+      notificationService.error('Failed to Suspend Driver', 'Unable to suspend driver. Please try again.');
       alert('Failed to suspend driver. Please try again.');
     }
   };

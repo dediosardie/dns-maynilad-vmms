@@ -1,8 +1,16 @@
 import { Maintenance } from '../types';
 
+// Format currency with Php prefix
+const formatCurrency = (amount: number): string => {
+  return `Php ${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
 interface MaintenanceTableProps {
   maintenances: Maintenance[];
-  vehicles: Array<{ id: string; plate_number: string }>;
+  vehicles: Array<{ id: string; plate_number: string; conduction_number?: string }>;
   onMarkCompleted: (id: string) => void;
   onEdit: (maintenance: Maintenance) => void;
 }
@@ -10,7 +18,7 @@ interface MaintenanceTableProps {
 export default function MaintenanceTable({ maintenances, vehicles, onMarkCompleted, onEdit }: MaintenanceTableProps) {
   const getVehiclePlate = (vehicleId: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle?.plate_number || 'N/A';
+    return vehicle ? `${vehicle.plate_number}${(vehicle as any).conduction_number ? ` (${(vehicle as any).conduction_number})` : ''}` : 'N/A';
   };
 
   if (maintenances.length === 0) {
@@ -48,6 +56,9 @@ export default function MaintenanceTable({ maintenances, vehicles, onMarkComplet
               <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
                 Cost
               </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+                Description
+              </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
                 Actions
               </th>
@@ -73,7 +84,10 @@ export default function MaintenanceTable({ maintenances, vehicles, onMarkComplet
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-mono">
-                  {maintenance.cost ? `$${maintenance.cost.toFixed(2)}` : 'N/A'}
+                  {maintenance.cost ? formatCurrency(maintenance.cost) : 'N/A'}
+                </td>
+                <td className="px-6 py-4 text-sm text-slate-700 max-w-xs truncate">
+                  {maintenance.description || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-right space-x-3">
                   <button

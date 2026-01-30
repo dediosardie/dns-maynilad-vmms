@@ -3,18 +3,54 @@
 import { useState, useEffect } from 'react';
 import { Incident, InsuranceClaim, Vehicle, Driver } from '../types';
 import Modal from './Modal';
-
+import { incidentService, insuranceService, vehicleService, driverService } from '../services/supabaseService';
+import { supabase } from '../supabaseClient';
+// Format currency with Php prefix
+const formatCurrency = (amount: number): string => {
+  return `Php ${amount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
 export default function IncidentInsuranceModule() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [claims] = useState<InsuranceClaim[]>([]);
+  const [claims, setClaims] = useState<InsuranceClaim[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
   const [isIncidentModalOpen, setIsIncidentModalOpen] = useState(false);
   const [isClaimModalOpen, setIsClaimModalOpen] = useState(false);
   const [editingIncident] = useState<Incident | undefined>();
   const [selectedIncidentForClaim, setSelectedIncidentForClaim] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoading(true);
+        const [incidentsData, claimsData, vehiclesData, driversData] = await Promise.all([
+          incidentService.getAll(),
+          insuranceService.getAllClaims(),
+          vehicleService.getAll(),
+          driverService.getAll(),
+        ]);
+        setIncidents(incidentsData);
+        setClaims(claimsData);
+        setVehicles(vehiclesData);
+        setDrivers(driversData);
+        console.log('Loaded incident data:', {
+          incidents: incidentsData.length,
+          claims: claimsData.length,
+          vehicles: vehiclesData.length,
+          drivers: driversData.length,
+        });
+      } catch (error) {
+        console.error('Error loading incidents and claims:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
+
     const handleVehiclesUpdate = ((event: CustomEvent) => setVehicles(event.detail)) as EventListener;
     const handleDriversUpdate = ((event: CustomEvent) => setDrivers(event.detail)) as EventListener;
     window.addEventListener('vehiclesUpdated', handleVehiclesUpdate);
@@ -24,6 +60,11 @@ export default function IncidentInsuranceModule() {
       window.removeEventListener('driversUpdated', handleDriversUpdate);
     };
   }, []);
+
+  // Dispatch event when incidents update so other modules can react
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('incidentsUpdated', { detail: incidents }));
+  }, [incidents]);
 
   // Incident Form Component (inline for consolidation)
   const IncidentForm = ({ initialData, onSubmit, onClose }: any) => {
@@ -39,6 +80,11 @@ export default function IncidentInsuranceModule() {
       road_conditions: initialData?.road_conditions || '',
       police_report_number: initialData?.police_report_number || '',
       estimated_cost: initialData?.estimated_cost || 0,
+      actual_cost: initialData?.actual_cost || 0,
+      witnesses: initialData?.witnesses || '',
+      assigned_to: initialData?.assigned_to || '',
+      resolution_notes: initialData?.resolution_notes || '',
+      status: initialData?.status || 'reported',
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -136,7 +182,30 @@ export default function IncidentInsuranceModule() {
           {/* Estimated Cost (number, optional, decimal) */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Estimated Cost</label>
-            <input type="number" step="0.01" value={formData.estimated_cost} onChange={(e) => setFormData({...formData, estimated_cost: parseFloat(e.target.value)})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <input type="number" step="0.01" value={formData.estimated_cost} onChange={(e) => setFormData({...formData, estimated_cost: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+          </div>
+
+          {/* Actual Cost (number, optional, decimal) */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Actual Cost</label>
+            <input type="number" step="0.01" value={formData.actual_cost} onChange={(e) => setFormData({...formData, actual_cost: parseFloat(e.target.value) || 0})} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+          </div>
+
+          {/* Assigned To (text, optional) */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Assigned To</label>
+            <input type="text" value={formData.assigned_to} onChange={(e) => setFormData({...formData, assigned_to: e.target.value})} placeholder="User ID or name" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+          </div>
+
+          {/* Status (select, required) */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Status <span className="text-red-600">*</span></label>
+            <select value={formData.status} onChange={(e) => setFormData({...formData, status: e.target.value as any})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
+              <option value="reported">Reported</option>
+              <option value="under_investigation">Under Investigation</option>
+              <option value="resolved">Resolved</option>
+              <option value="closed">Closed</option>
+            </select>
           </div>
         </div>
 
@@ -145,6 +214,20 @@ export default function IncidentInsuranceModule() {
           <label className="block text-sm font-medium text-slate-700 mb-1">Description <span className="text-red-600">*</span> (min 50 characters)</label>
           <textarea rows={4} value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} required minLength={50} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500"></textarea>
           <p className="text-xs text-slate-500 mt-1">{formData.description.length}/50 characters</p>
+        </div>
+
+        {/* Witnesses (textarea, optional, JSON) */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Witnesses</label>
+          <textarea rows={2} value={formData.witnesses} onChange={(e) => setFormData({...formData, witnesses: e.target.value})} placeholder="Enter witness names and contact information" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500"></textarea>
+          <p className="text-xs text-slate-500 mt-1">Optional: List any witnesses with contact information</p>
+        </div>
+
+        {/* Resolution Notes (textarea, optional) */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Resolution Notes</label>
+          <textarea rows={3} value={formData.resolution_notes} onChange={(e) => setFormData({...formData, resolution_notes: e.target.value})} placeholder="Enter resolution notes when closing the incident" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500"></textarea>
+          <p className="text-xs text-slate-500 mt-1">Optional: Add notes about how the incident was resolved</p>
         </div>
 
         {/* Actions: Report Incident (primary, submit) */}
@@ -159,18 +242,28 @@ export default function IncidentInsuranceModule() {
   };
 
   // Action: Report Incident (primary, submit) - per markdown
-  const handleSaveIncident = (incidentData: any) => {
-    const newIncident: Incident = {
-      ...incidentData,
-      id: crypto.randomUUID(),
-      incident_number: `INC-${new Date().getFullYear()}-${String(incidents.length + 1).padStart(6, '0')}`, // Format per business rules
-      status: 'reported',
-      reported_by: 'current_user_id',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    setIncidents([...incidents, newIncident]);
-    setIsIncidentModalOpen(false);
+  const handleSaveIncident = async (incidentData: any) => {
+    try {
+      // Get current user ID
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert('You must be logged in to report an incident.');
+        return;
+      }
+      
+      // Add reported_by field
+      const incidentWithReporter = {
+        ...incidentData,
+        reported_by: user.id,
+      };
+      
+      const newIncident = await incidentService.create(incidentWithReporter);
+      setIncidents([newIncident, ...incidents]);
+      setIsIncidentModalOpen(false);
+    } catch (error: any) {
+      console.error('Failed to save incident:', error);
+      alert(error.message || 'Failed to save incident. Please try again.');
+    }
   };
 
   // Action: File Insurance Claim (primary, opens claim form) - per markdown
@@ -186,6 +279,12 @@ export default function IncidentInsuranceModule() {
 
   return (
     <div className="space-y-6">
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        </div>
+      ) : (
+        <>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
@@ -290,7 +389,12 @@ export default function IncidentInsuranceModule() {
                     <tr key={incident.id} className="hover:bg-slate-50">
                       <td className="px-4 py-3 text-sm font-medium text-slate-900">{incident.incident_number}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">{new Date(incident.incident_date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{vehicles.find(v => v.id === incident.vehicle_id)?.plate_number || 'N/A'}</td>
+                      <td className="px-4 py-3 text-sm text-slate-700">
+                        {(() => {
+                          const vehicle = vehicles.find(v => v.id === incident.vehicle_id);
+                          return vehicle ? `${vehicle.plate_number}${vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''}` : 'N/A';
+                        })()}
+                      </td>
                       <td className="px-4 py-3 text-sm text-slate-700 capitalize">{incident.incident_type.replace('_', ' ')}</td>
                       <td className="px-4 py-3 text-sm">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
@@ -312,9 +416,9 @@ export default function IncidentInsuranceModule() {
                           {incident.status.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-700">${incident.estimated_cost?.toFixed(2) || '-'}</td>
-                      <td className="px-4 py-3 text-right text-sm space-x-2">
-                        {/* Action: File Insurance Claim (primary) - only if cost > $1000 per business rules */}
+                      <td className="px-4 py-3 text-sm text-slate-700">{formatCurrency(incident.estimated_cost || 0)}</td>
+                      <td className="px-4 py-3 text-right text-sm font-medium space-x-2">
+                        {/* Action: File Insurance Claim (primary) - only if cost > Php 1000 per business rules */}
                         {incident.estimated_cost && incident.estimated_cost > 1000 && !claims.find(c => c.incident_id === incident.id) && (
                           <button onClick={() => handleFileClaim(incident.id)} className="text-blue-600 hover:text-blue-900">File Claim</button>
                         )}
@@ -339,6 +443,8 @@ export default function IncidentInsuranceModule() {
         <p className="text-slate-600 mb-4">Insurance claim form for incident: {selectedIncidentForClaim}</p>
         <button onClick={() => setIsClaimModalOpen(false)} className="px-4 py-2 bg-slate-200 rounded">Close</button>
       </Modal>
+        </>
+      )}
     </div>
   );
 }

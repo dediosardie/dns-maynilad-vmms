@@ -1,6 +1,17 @@
 // Fuel Transaction Table - Defined per fuel-tracking-module.md
 import { FuelTransaction, Vehicle, Driver } from '../types';
+// Format number with thousand separators
+const formatNumber = (num: number, decimals: number = 2): string => {
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+};
 
+// Format currency with Php prefix
+const formatCurrency = (amount: number): string => {
+  return `Php ${formatNumber(amount, 2)}`;
+};
 interface FuelTransactionTableProps {
   transactions: FuelTransaction[];
   vehicles: Vehicle[];
@@ -19,7 +30,7 @@ export default function FuelTransactionTable({
 }: FuelTransactionTableProps) {
   const getVehicleInfo = (vehicleId: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle ? `${vehicle.plate_number}` : 'N/A';
+    return vehicle ? `${vehicle.plate_number}${vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''}` : 'N/A';
   };
 
   const getDriverInfo = (driverId: string) => {
@@ -100,16 +111,16 @@ export default function FuelTransactionTable({
                   {new Date(transaction.transaction_date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                  {transaction.odometer_reading.toLocaleString()} km
+                  {formatNumber(transaction.odometer_reading, 0)} km
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                  {transaction.liters.toFixed(2)} L
+                  {formatNumber(transaction.liters, 2)} L
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                  ${transaction.cost.toFixed(2)}
+                  {formatCurrency(transaction.cost)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
-                  ${transaction.cost_per_liter.toFixed(2)}
+                  {formatCurrency(transaction.cost_per_liter)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${

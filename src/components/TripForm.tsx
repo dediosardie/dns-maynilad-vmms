@@ -10,6 +10,10 @@ interface TripFormProps {
   drivers: Driver[];
 }
 
+// TODO: Replace with your Google Maps API key
+// Get your API key from: https://console.cloud.google.com/google/maps-apis
+const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY_HERE';
+
 export default function TripForm({ onSave, onUpdate, initialData, vehicles, drivers }: TripFormProps) {
   const [formData, setFormData] = useState<Omit<Trip, 'id' | 'created_at' | 'updated_at'>>({
     vehicle_id: initialData?.vehicle_id || '',
@@ -27,8 +31,70 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
     notes: initialData?.notes,
   });
 
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
+  const [distanceError, setDistanceError] = useState<string | null>(null);
+
   // Filter: only active vehicles per business rules
   const activeVehicles = vehicles.filter(v => v.status === 'active');
+
+  // Auto-calculate distance when origin and destination are provided
+  useEffect(() => {
+    const calculateDistance = async () => {
+      if (!formData.origin || !formData.destination) {
+        setDistanceError(null);
+        return;
+      }
+
+      // Skip if API key is not configured
+      if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY_HERE') {
+        setDistanceError('Google Maps API key not configured');
+        return;
+      }
+
+      setIsCalculatingDistance(true);
+      setDistanceError(null);
+
+      try {
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(
+            formData.origin
+          )}&destinations=${encodeURIComponent(
+            formData.destination
+          )}&units=metric&key=${GOOGLE_MAPS_API_KEY}`,
+          {
+            mode: 'cors',
+          }
+        );
+
+        const data = await response.json();
+
+        if (data.status === 'OK' && data.rows[0]?.elements[0]?.status === 'OK') {
+          const distanceInMeters = data.rows[0].elements[0].distance.value;
+          const distanceInKm = distanceInMeters / 1000;
+
+          setFormData(prev => ({
+            ...prev,
+            distance_km: parseFloat(distanceInKm.toFixed(2)),
+          }));
+          setDistanceError(null);
+        } else {
+          setDistanceError('Could not calculate distance. Please check addresses.');
+        }
+      } catch (error) {
+        console.error('Error calculating distance:', error);
+        setDistanceError('Failed to calculate distance. Please enter manually.');
+      } finally {
+        setIsCalculatingDistance(false);
+      }
+    };
+
+    // Debounce: wait 1 second after user stops typing
+    const timeoutId = setTimeout(() => {
+      calculateDistance();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
+  }, [formData.origin, formData.destination]);
 
   useEffect(() => {
     if (initialData) {
@@ -97,7 +163,7 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
             <option value="">Select Vehicle</option>
             {activeVehicles.map(vehicle => (
               <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.plate_number} - {vehicle.make} {vehicle.model}
+                {vehicle.plate_number || vehicle.conduction_number} - {vehicle.make} {vehicle.model}
               </option>
             ))}
           </select>
@@ -188,6 +254,12 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1.5">
             Distance (km) <span className="text-red-600">*</span>
+            {isCalculatingDistance && (
+              <span className="ml-2 text-xs text-blue-600">Calculating...</span>
+            )}
+            {distanceError && (
+              <span className="ml-2 text-xs text-amber-600">{distanceError}</span>
+            )}
           </label>
           <input
             type="number"
@@ -198,7 +270,11 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
             min="0"
             step="0.1"
             className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            disabled={isCalculatingDistance}
           />
+          <p className="mt-1 text-xs text-slate-500">
+            Distance auto-calculates from Google Maps
+          </p>
         </div>
 
         {/* Estimated Fuel Consumption (number, required, liters) */}

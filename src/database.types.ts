@@ -13,6 +13,7 @@ export interface Database {
         Row: {
           id: string
           plate_number: string
+          conduction_number?: string
           make: string
           model: string
           year: number
@@ -26,6 +27,7 @@ export interface Database {
         Insert: {
           id?: string
           plate_number: string
+          conduction_number?: string
           make: string
           model: string
           year: number
@@ -39,6 +41,7 @@ export interface Database {
         Update: {
           id?: string
           plate_number?: string
+          conduction_number?: string
           make?: string
           model?: string
           year?: number

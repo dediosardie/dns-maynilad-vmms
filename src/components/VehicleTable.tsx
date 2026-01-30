@@ -31,45 +31,62 @@ export default function VehicleTable({ vehicles, onDispose, onEdit }: VehicleTab
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 sticky top-0 z-10">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Plate Number
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
+                Conduction #
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Make
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Model
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
+                Variant
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Year
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 VIN
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
+                Fuel Capacity
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Ownership Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Insurance Expiry
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Registration Expiry
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider bg-slate-50">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-slate-200">
             {vehicles.map((vehicle) => (
-              <tr key={vehicle.id} className="hover:bg-slate-50">
+              <tr 
+                key={vehicle.id} 
+                className="hover:bg-slate-50 cursor-pointer" 
+                onDoubleClick={() => onEdit(vehicle)}
+                title="Double-click to edit"
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                   {vehicle.plate_number}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-mono">
+                  {vehicle.conduction_number || '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                   {vehicle.make}
@@ -78,10 +95,16 @@ export default function VehicleTable({ vehicles, onDispose, onEdit }: VehicleTab
                   {vehicle.model}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                  {vehicle.variant || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
                   {vehicle.year}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 font-mono">
                   {vehicle.vin}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                  {vehicle.fuel_capacity ? `${vehicle.fuel_capacity} L` : '-'}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700 capitalize">
                   {vehicle.ownership_type}

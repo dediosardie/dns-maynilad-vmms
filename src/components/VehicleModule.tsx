@@ -3,28 +3,19 @@ import { Vehicle } from '../types';
 import VehicleTable from './VehicleTable';
 import VehicleForm from './VehicleForm';
 import Modal from './Modal';
-import { vehicleStorage } from '../storage';
+import { vehicleService } from '../services/supabaseService';
+import { notificationService } from '../services/notificationService';
+import { auditLogService } from '../services/auditLogService';
 
 export default function VehicleModule() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Load vehicles from storage on mount
-    const loadVehicles = async () => {
-      try {
-        setIsLoading(true);
-        const storedVehicles = await vehicleStorage.getAll();
-        console.log('Loaded vehicles:', storedVehicles);
-        setVehicles(storedVehicles);
-      } catch (error) {
-        console.error('Error loading vehicles:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
     loadVehicles();
   }, []);
 
@@ -32,40 +23,149 @@ export default function VehicleModule() {
     window.dispatchEvent(new CustomEvent('vehiclesUpdated', { detail: vehicles }));
   }, [vehicles]);
 
-  const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id'>) => {
-    const newVehicle: Vehicle = {
-      ...vehicleData,
-      id: crypto.randomUUID(),
-    };
+  const loadVehicles = async () => {
     try {
-      setIsModalOpen(false);
-      await vehicleStorage.save(newVehicle);
-      setVehicles([...vehicles, newVehicle]);
+      setIsLoading(true);
+      setError(null);
+      const data = await vehicleService.getAll();
+      setVehicles(data);
     } catch (error) {
+      console.error('Error loading vehicles:', error);
+      setError('Failed to load vehicles. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSaveVehicle = async (vehicleData: Omit<Vehicle, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const newVehicle = await vehicleService.create(vehicleData);
+      setVehicles([newVehicle, ...vehicles]);
+      setIsModalOpen(false);
+      
+      // Create notification
+      notificationService.success(
+        'Vehicle Added',
+        `${newVehicle.plate_number} has been successfully added to the fleet`
+      );
+      
+      // Create audit log
+      await auditLogService.createLog(
+        'Vehicle Created',
+        `Added vehicle ${newVehicle.plate_number} (${newVehicle.make} ${newVehicle.model})`
+      );
+    } catch (error: any) {
       console.error('Failed to save vehicle:', error);
-      alert('Failed to save vehicle. Please try again.');
+      notificationService.error(
+        'Failed to Add Vehicle',
+        error.message || 'Unable to add vehicle. Please try again.'
+      );
+      alert(error.message || 'Failed to save vehicle. Please try again.');
     }
   };
 
   const handleUpdateVehicle = async (vehicle: Vehicle) => {
     try {
-      await vehicleStorage.update(vehicle);
-      setVehicles(vehicles.map(v => v.id === vehicle.id ? vehicle : v));
+      // Validate vehicle object
+      if (!vehicle || !vehicle.id) {
+        console.error('Invalid vehicle object:', vehicle);
+        alert('Invalid vehicle data. Missing ID.');
+        return;
+      }
+
+      // Check if vehicle exists in current state
+      const existingVehicle = vehicles.find(v => v.id === vehicle.id);
+      if (!existingVehicle) {
+        console.error('Vehicle not found in current state:', vehicle.id);
+        alert('Vehicle not found in current list. Please refresh and try again.');
+        return;
+      }
+
+      console.log('Updating vehicle:', {
+        id: vehicle.id,
+        plate_number: vehicle.plate_number,
+        make: vehicle.make,
+        model: vehicle.model
+      });
+
+      // Verify vehicle exists in database before updating
+      const dbVehicle = await vehicleService.getById(vehicle.id);
+      if (!dbVehicle) {
+        console.error('Vehicle not found in database:', vehicle.id);
+        alert('Vehicle not found in database. It may have been deleted. Refreshing list...');
+        await loadVehicles();
+        setIsModalOpen(false);
+        setEditingVehicle(undefined);
+        return;
+      }
+
+      // Extract only updatable fields (exclude id, created_at, updated_at)
+      const { id, created_at, updated_at, ...updateData } = vehicle;
+      console.log('Update data being sent:', updateData);
+      
+      const updated = await vehicleService.update(vehicle.id, updateData);
+      console.log('Update successful, received:', updated);
+      
+      setVehicles(vehicles.map(v => v.id === updated.id ? updated : v));
       setIsModalOpen(false);
       setEditingVehicle(undefined);
-    } catch (error) {
+      
+      // Create notification
+      notificationService.success(
+        'Vehicle Updated',
+        `${updated.plate_number} has been successfully updated`
+      );
+      
+      // Create audit log
+      await auditLogService.createLog(
+        'Vehicle Updated',
+        `Updated vehicle ${updated.plate_number} (${updated.make} ${updated.model})`,
+        { before: vehicle, after: updated }
+      );
+    } catch (error: any) {
       console.error('Failed to update vehicle:', error);
-      alert('Failed to update vehicle. Please try again.');
+      console.error('Vehicle object was:', vehicle);
+      console.error('Error details:', {
+        message: error.message,
+        code: error.code,
+        details: error.details
+      });
+      notificationService.error(
+        'Failed to Update Vehicle',
+        error.message || 'Unable to update vehicle. Please try again.'
+      );
+      alert(error.message || 'Failed to update vehicle. Please try again.');
     }
   };
 
   const handleDisposeVehicle = async (id: string) => {
+    const vehicle = vehicles.find(v => v.id === id);
+    if (!confirm('Are you sure you want to dispose this vehicle? This action cannot be undone.')) {
+      return;
+    }
+    
     try {
-      await vehicleStorage.delete(id);
+      await vehicleService.delete(id);
       setVehicles(vehicles.filter(v => v.id !== id));
-    } catch (error) {
+      
+      // Create notification
+      notificationService.info(
+        'Vehicle Disposed',
+        `${vehicle?.plate_number || 'Vehicle'} has been removed from the fleet`
+      );
+      
+      // Create audit log
+      await auditLogService.createLog(
+        'Vehicle Disposed',
+        `Disposed vehicle ${vehicle?.plate_number} (${vehicle?.make} ${vehicle?.model})`
+      );
+    } catch (error: any) {
       console.error('Failed to dispose vehicle:', error);
-      alert('Failed to dispose vehicle. Please try again.');
+      notificationService.error(
+        'Failed to Dispose Vehicle',
+        error.message || 'Unable to dispose vehicle. Please try again.'
+      );
+      alert(error.message || 'Failed to dispose vehicle. Please try again.');
     }
   };
 
@@ -84,6 +184,23 @@ export default function VehicleModule() {
     setEditingVehicle(undefined);
   };
 
+  // Filter vehicles based on search query
+  const filteredVehicles = vehicles.filter(vehicle => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      vehicle.plate_number.toLowerCase().includes(query) ||
+      vehicle.make.toLowerCase().includes(query) ||
+      vehicle.model.toLowerCase().includes(query) ||
+      vehicle.vin.toLowerCase().includes(query) ||
+      (vehicle.conduction_number && vehicle.conduction_number.toLowerCase().includes(query)) ||
+      (vehicle.variant && vehicle.variant.toLowerCase().includes(query)) ||
+      vehicle.status.toLowerCase().includes(query) ||
+      vehicle.ownership_type.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <div className="space-y-6">
       {/* Stats Cards */}
@@ -92,7 +209,7 @@ export default function VehicleModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Total Vehicles</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{vehicles.length}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-1">{filteredVehicles.length}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +222,7 @@ export default function VehicleModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Active</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">{vehicles.filter(v => v.status === 'active').length}</p>
+              <p className="text-2xl font-bold text-emerald-600 mt-1">{filteredVehicles.filter(v => v.status === 'active').length}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +235,7 @@ export default function VehicleModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Maintenance</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{vehicles.filter(v => v.status === 'maintenance').length}</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">{filteredVehicles.filter(v => v.status === 'maintenance').length}</p>
             </div>
             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -131,7 +248,7 @@ export default function VehicleModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-600">Disposed</p>
-              <p className="text-2xl font-bold text-slate-600 mt-1">{vehicles.filter(v => v.status === 'disposed').length}</p>
+              <p className="text-2xl font-bold text-slate-600 mt-1">{filteredVehicles.filter(v => v.status === 'disposed').length}</p>
             </div>
             <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -145,20 +262,40 @@ export default function VehicleModule() {
       {/* Main Content Card */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-slate-200">
-          <div>
+          <div className="flex-1">
             <h2 className="text-xl font-semibold text-slate-900">Vehicle Fleet</h2>
             <p className="text-sm text-slate-600 mt-1">Manage and monitor your vehicle inventory</p>
           </div>
-          <button
-            onClick={handleAddVehicle}
-            className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Vehicle
-          </button>
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <input
+                type="search"
+                placeholder="Search vehicles..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              />
+              <svg className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <button
+              onClick={handleAddVehicle}
+              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm whitespace-nowrap"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Vehicle
+            </button>
+          </div>
         </div>
+        
+        {error && (
+          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        )}
         
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
@@ -169,11 +306,13 @@ export default function VehicleModule() {
           </div>
         ) : (
           <div className="p-6">
-            <VehicleTable
-              vehicles={vehicles}
-              onDispose={handleDisposeVehicle}
-              onEdit={handleEditVehicle}
-            />
+            <div className="overflow-x-auto overflow-y-auto max-h-96 md:max-h-[32rem] lg:max-h-[40rem] xl:max-h-[38rem]">
+              <VehicleTable
+                vehicles={filteredVehicles}
+                onDispose={handleDisposeVehicle}
+                onEdit={handleEditVehicle}
+              />
+            </div>
           </div>
         )}
       </div>

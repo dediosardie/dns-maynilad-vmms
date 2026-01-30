@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
 import { Vehicle } from './types';
+import { notificationService, Notification } from './services/notificationService';
 import VehicleModule from './components/VehicleModule';
 import DriverModule from './components/DriverModule';
 import MaintenanceModule from './components/MaintenanceModule';
@@ -9,14 +11,51 @@ import IncidentInsuranceModule from './components/IncidentInsuranceModule';
 import ComplianceDocumentModule from './components/ComplianceDocumentModule';
 import VehicleDisposalModule from './components/VehicleDisposalModule';
 import ReportingAnalyticsDashboard from './components/ReportingAnalyticsDashboard';
+import UserModule from './components/UserModule';
+import LoginPage from './components/LoginPage';
+import ChangePasswordModal from './components/ChangePasswordModal';
+import { ProtectedRoute, RoleBadge } from './components/ProtectedRoute';
+import { useRoleAccess } from './hooks/useRoleAccess';
+import { authService } from './services/authService';
+import { Module } from './config/rolePermissions';
 
-type ActiveModule = 'vehicles' | 'drivers' | 'maintenance' | 'trips' | 'fuel' | 'incidents' | 'compliance' | 'disposal' | 'reporting';
+type ActiveModule = 'vehicles' | 'drivers' | 'maintenance' | 'trips' | 'fuel' | 'incidents' | 'compliance' | 'disposal' | 'reporting' | 'users';
 
 function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [activeModule, setActiveModule] = useState<ActiveModule>('vehicles');
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  // Role-based access control
+  const { userRole, loading: roleLoading, hasModuleAccess } = useRoleAccess();
+
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Clear any existing session on initial load
+      await authService.signOut();
+      setUser(null);
+      setAuthLoading(false);
+    };
+
+    checkAuth();
+
+    // Subscribe to auth changes
+    const subscription = authService.onAuthStateChange((user) => {
+      setUser(user);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const handleVehiclesUpdate = (event: CustomEvent<Vehicle[]>) => {
@@ -29,6 +68,95 @@ function App() {
     };
   }, []);
 
+  // Subscribe to notification service
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribe((notification) => {
+      setNotifications(prev => [notification, ...prev]);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  const handleSignOut = async () => {
+    await authService.signOut();
+    setUser(null);
+    setShowUserMenu(false);
+  };
+
+  const handleLoginSuccess = () => {
+    // User state will be updated by the auth state listener
+  };
+
+  const handleDismissNotification = (id: number) => {
+    setNotifications(notifications.filter(n => n.id !== id));
+  };
+
+  const handleMarkAsRead = (id: number) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, unread: false } : n
+    ));
+  };
+
+  const handleMarkAllAsRead = () => {
+    setNotifications(notifications.map(n => ({ ...n, unread: false })));
+  };
+
+  const unreadCount = notifications.filter(n => n.unread).length;
+
+  // Show loading spinner while checking auth
+  if (authLoading || roleLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+          <p className="text-slate-600 mt-4">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login page if not authenticated
+  if (!user) {
+    return <LoginPage onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // Show access denied if user has no role assigned
+  if (!userRole) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
+          <div className="text-center">
+            <svg
+              className="mx-auto h-16 w-16 text-red-500 mb-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Role Assigned</h2>
+            <p className="text-gray-600 mb-6">
+              Your account does not have a role assigned. Please contact your administrator.
+            </p>
+            <button
+              onClick={handleSignOut}
+              className="w-full bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const getPageTitle = () => {
     switch (activeModule) {
       case 'vehicles': return 'Vehicle Management';
@@ -39,59 +167,69 @@ function App() {
       case 'incidents': return 'Incidents & Insurance';
       case 'compliance': return 'Compliance & Documents';
       case 'disposal': return 'Vehicle Disposal Management';
-      case 'reporting': return 'Reporting & Analytics';
+      case 'reporting': return 'Dashboard';
+      case 'users': return 'User Management';
       default: return 'Dashboard';
     }
   };
 
   const navItems = [
-    { id: 'vehicles' as ActiveModule, label: 'Vehicles', icon: (
+        { id: 'reporting' as ActiveModule, module: 'analytics' as Module, label: 'Dashboard', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
     )},
-    { id: 'drivers' as ActiveModule, label: 'Drivers', icon: (
+    { id: 'vehicles' as ActiveModule, module: 'vehicles' as Module, label: 'Vehicles', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    )},
+    { id: 'drivers' as ActiveModule, module: 'drivers' as Module, label: 'Drivers', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    )},
+    { id: 'trips' as ActiveModule, module: 'trips' as Module, label: 'Trips', icon: (
+      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+      </svg>
+    )},
+
+    { id: 'users' as ActiveModule, module: 'users' as Module, label: 'Users', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
       </svg>
     )},
-    { id: 'maintenance' as ActiveModule, label: 'Maintenance', icon: (
+    { id: 'maintenance' as ActiveModule, module: 'maintenance' as Module, label: 'Maintenance', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
     )},
-    { id: 'trips' as ActiveModule, label: 'Trips', icon: (
+    { id: 'fuel' as ActiveModule, module: 'fuel' as Module, label: 'Fuel Tracking', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
       </svg>
     )},
-    { id: 'fuel' as ActiveModule, label: 'Fuel Tracking', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-      </svg>
-    )},
-    { id: 'incidents' as ActiveModule, label: 'Incidents', icon: (
+    { id: 'incidents' as ActiveModule, module: 'incidents' as Module, label: 'Incidents', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
       </svg>
     )},
-    { id: 'compliance' as ActiveModule, label: 'Compliance', icon: (
+    { id: 'compliance' as ActiveModule, module: 'compliance' as Module, label: 'Compliance', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     )},
-    { id: 'disposal' as ActiveModule, label: 'Disposal', icon: (
+    { id: 'disposal' as ActiveModule, module: 'disposal' as Module, label: 'Disposal', icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
       </svg>
     )},
-    { id: 'reporting' as ActiveModule, label: 'Reporting', icon: (
-      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-    )},
   ];
+
+  // Filter nav items based on role access
+  const accessibleNavItems = navItems.filter(item => hasModuleAccess(item.module));
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -137,20 +275,188 @@ function App() {
 
           {/* Right: Notifications + Profile */}
           <div className="flex items-center gap-2">
-            <button className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500">
-              <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-              </svg>
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-            <div className="flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
-              <div className="hidden sm:block text-right">
-                <div className="text-sm font-medium text-slate-900">Admin User</div>
-                <div className="text-xs text-slate-500">admin@system.com</div>
-              </div>
-              <button className="w-8 h-8 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white flex items-center justify-center text-sm font-semibold hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
-                A
+            <div className="relative">
+              <button 
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 rounded-lg hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-semibold">
+                    {unreadCount}
+                  </span>
+                )}
               </button>
+
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowNotifications(false)}
+                  />
+                  <div className="absolute right-0 top-12 w-96 bg-white rounded-lg shadow-lg border border-slate-200 z-50 max-h-[32rem] flex flex-col">
+                    <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between sticky top-0 bg-white">
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900">Notifications</h3>
+                        {unreadCount > 0 && (
+                          <p className="text-xs text-slate-500">{unreadCount} unread</p>
+                        )}
+                      </div>
+                      {notifications.length > 0 && (
+                        <button
+                          onClick={handleMarkAllAsRead}
+                          className="text-xs text-red-600 hover:text-red-700 font-medium"
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="overflow-y-auto flex-1">
+                      {notifications.length === 0 ? (
+                        <div className="py-12 text-center">
+                          <svg className="w-12 h-12 text-slate-300 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                          </svg>
+                          <p className="text-sm text-slate-500">No notifications</p>
+                        </div>
+                      ) : (
+                        <div className="divide-y divide-slate-100">
+                          {notifications.map((notification) => (
+                            <div
+                              key={notification.id}
+                              className={`p-4 hover:bg-slate-50 transition-colors ${notification.unread ? 'bg-red-50/50' : ''}`}
+                            >
+                              <div className="flex items-start gap-3">
+                                <div className="flex-shrink-0 mt-1">
+                                  {notification.type === 'success' && (
+                                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {notification.type === 'error' && (
+                                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {notification.type === 'warning' && (
+                                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {notification.type === 'info' && (
+                                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                      </svg>
+                                    </div>
+                                  )}
+                                  {notification.unread && !notification.type && (
+                                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1">
+                                      <p className="text-sm font-medium text-slate-900">{notification.title}</p>
+                                      <p className="text-sm text-slate-600 mt-1">{notification.message}</p>
+                                      <p className="text-xs text-slate-400 mt-2">{notification.time}</p>
+                                    </div>
+                                    <button
+                                      onClick={() => handleDismissNotification(notification.id)}
+                                      className="flex-shrink-0 p-1 rounded hover:bg-slate-200 transition-colors"
+                                      title="Dismiss"
+                                    >
+                                      <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                  {notification.unread && (
+                                    <button
+                                      onClick={() => handleMarkAsRead(notification.id)}
+                                      className="text-xs text-red-600 hover:text-red-700 font-medium mt-2"
+                                    >
+                                      Mark as read
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {notifications.length > 0 && (
+                      <div className="px-4 py-3 border-t border-slate-200 bg-slate-50">
+                        <button className="text-sm text-red-600 hover:text-red-700 font-medium w-full text-center">
+                          View all notifications
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="relative flex items-center gap-2 ml-2 pl-2 border-l border-slate-200">
+              <div className="hidden sm:block text-right mr-2">
+                <div className="flex items-center justify-end gap-2 mb-1">
+                  <div className="text-sm font-medium text-slate-900">{user.email?.split('@')[0] || 'User'}</div>
+                  <RoleBadge />
+                </div>
+                <div className="text-xs text-slate-500">{user.email}</div>
+              </div>
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-red-500 to-red-600 text-white flex items-center justify-center text-sm font-semibold hover:shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                {user.email?.[0].toUpperCase() || 'U'}
+              </button>
+              
+              {/* User Dropdown Menu */}
+              {showUserMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowUserMenu(false)}
+                  />
+                  <div className="absolute right-0 top-12 w-56 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+                    <div className="px-4 py-2 border-b border-slate-200">
+                      <p className="text-sm font-medium text-slate-900">{user.email}</p>
+                      <p className="text-xs text-slate-500">Signed in</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowChangePassword(true);
+                        setShowUserMenu(false);
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                      </svg>
+                      Change Password
+                    </button>
+                    <button
+                      onClick={handleSignOut}
+                      className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sign Out
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -177,31 +483,11 @@ function App() {
             flex flex-col
           `}
         >
-          {/* Logo */}
-          <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200">
-            {isSidebarExpanded && (
-              <div className="flex items-center gap-2 w-full">
-                <svg className="h-10 w-auto" viewBox="0 0 760 520" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <text x="20" y="380" fontFamily="Arial, sans-serif" fontSize="320" fontWeight="300" fill="#CBD5E1" letterSpacing="-10">DNS</text>
-                  <text x="20" y="500" fontFamily="Arial, sans-serif" fontSize="60" fontWeight="100" fill="#CBD5E1" letterSpacing="15">DELTA NEOSOLUTIONS</text>
-                  <path d="M430 150 L530 260 L430 370 Z" fill="#DC2626"/>
-                  <path d="M520 150 L620 260 L520 370 Z" fill="#DC2626"/>
-                  <path d="M610 150 L710 260 L610 370 Z" fill="#DC2626"/>
-                </svg>
-              </div>
-            )}
-            {!isSidebarExpanded && (
-              <div className="w-full flex justify-center">
-                <svg className="h-10 w-auto" viewBox="0 0 300 520" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M50 150 L150 260 L50 370 Z" fill="#DC2626"/>
-                  <path d="M125 150 L225 260 L125 370 Z" fill="#DC2626"/>
-                  <path d="M200 150 L300 260 L200 370 Z" fill="#DC2626"/>
-                </svg>
-              </div>
-            )}
+          {/* Mobile Close Button */}
+          <div className="h-16 flex items-center justify-end px-4 border-b border-slate-200 lg:hidden">
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-2 rounded-lg hover:bg-slate-100"
+              className="p-2 rounded-lg hover:bg-slate-100"
             >
               <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -210,31 +496,85 @@ function App() {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => {
-                  setActiveModule(item.id);
-                  setIsSidebarOpen(false);
-                }}
-                className={`
-                  w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all
-                  ${activeModule === item.id
-                    ? 'bg-gradient-to-r from-red-50 to-red-100 text-red-700 shadow-sm'
-                    : 'text-slate-700 hover:bg-slate-100'
-                  }
-                  ${!isSidebarExpanded ? 'justify-center lg:px-2' : ''}
-                `}
-              >
-                <span className={`flex-shrink-0 ${activeModule === item.id ? 'text-red-600' : ''}`}>
-                  {item.icon}
-                </span>
+          <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
+            {/* Main Pages Section */}
+            <div>
+              {isSidebarExpanded && (
+                <div className="px-3 mb-2">
+                  <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Main Pages</h3>
+                </div>
+              )}
+              <div className="space-y-1">
+                {accessibleNavItems
+                  .filter(item => ['reporting', 'vehicles', 'drivers', 'trips', 'users'].includes(item.id))
+                  .map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setActiveModule(item.id);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`
+                        w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                        ${activeModule === item.id
+                          ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
+                          : 'text-slate-700 hover:bg-slate-100'
+                        }
+                        ${!isSidebarExpanded ? 'justify-center lg:px-2' : ''}
+                      `}
+                    >
+                      <span className={`flex-shrink-0 ${activeModule === item.id ? 'text-white' : 'text-slate-600'}`}>
+                        {item.icon}
+                      </span>
+                      {isSidebarExpanded && (
+                        <span className="font-medium text-sm">{item.label}</span>
+                      )}
+                    </button>
+                  ))}
+              </div>
+            </div>
+
+            {/* Maintenance Section */}
+            {accessibleNavItems.some(item => ['maintenance', 'fuel', 'incidents', 'compliance', 'disposal'].includes(item.id)) && (
+              <div>
                 {isSidebarExpanded && (
-                  <span className="font-medium text-sm">{item.label}</span>
+                  <div className="px-3 mb-2 pt-2 border-t border-slate-200">
+                    <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Maintenance</h3>
+                  </div>
                 )}
-              </button>
-            ))}
+                {!isSidebarExpanded && (
+                  <div className="border-t border-slate-200 pt-3"></div>
+                )}
+                <div className="space-y-1">
+                  {accessibleNavItems
+                    .filter(item => ['maintenance', 'fuel', 'incidents', 'compliance', 'disposal'].includes(item.id))
+                    .map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => {
+                          setActiveModule(item.id);
+                          setIsSidebarOpen(false);
+                        }}
+                        className={`
+                          w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all
+                          ${activeModule === item.id
+                            ? 'bg-gradient-to-r from-red-600 to-red-700 text-white shadow-md'
+                            : 'text-slate-700 hover:bg-slate-100'
+                          }
+                          ${!isSidebarExpanded ? 'justify-center lg:px-2' : ''}
+                        `}
+                      >
+                        <span className={`flex-shrink-0 ${activeModule === item.id ? 'text-white' : 'text-slate-600'}`}>
+                          {item.icon}
+                        </span>
+                        {isSidebarExpanded && (
+                          <span className="font-medium text-sm">{item.label}</span>
+                        )}
+                      </button>
+                    ))}
+                </div>
+              </div>
+            )}
           </nav>
 
           {/* Footer */}
@@ -254,20 +594,65 @@ function App() {
         {/* Main Content Area */}
         <main className="flex-1 overflow-auto bg-slate-50">
           <div className="p-4 md:p-6 lg:p-8">
-            {activeModule === 'vehicles' && <VehicleModule />}
-            {activeModule === 'drivers' && <DriverModule />}
-            {activeModule === 'maintenance' && (
-              <MaintenanceModule vehicles={vehicles.map(v => ({ id: v.id, plate_number: v.plate_number }))} />
+            {activeModule === 'vehicles' && (
+              <ProtectedRoute requiredModule="vehicles">
+                <VehicleModule />
+              </ProtectedRoute>
             )}
-            {activeModule === 'trips' && <TripModule />}
-            {activeModule === 'fuel' && <FuelTrackingModule />}
-            {activeModule === 'incidents' && <IncidentInsuranceModule />}
-            {activeModule === 'compliance' && <ComplianceDocumentModule />}
-            {activeModule === 'disposal' && <VehicleDisposalModule />}
-            {activeModule === 'reporting' && <ReportingAnalyticsDashboard />}
+            {activeModule === 'drivers' && (
+              <ProtectedRoute requiredModule="drivers">
+                <DriverModule />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'maintenance' && (
+              <ProtectedRoute requiredModule="maintenance">
+                <MaintenanceModule vehicles={vehicles.map(v => ({ id: v.id, plate_number: v.plate_number }))} />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'trips' && (
+              <ProtectedRoute requiredModule="trips">
+                <TripModule />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'fuel' && (
+              <ProtectedRoute requiredModule="fuel">
+                <FuelTrackingModule />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'incidents' && (
+              <ProtectedRoute requiredModule="incidents">
+                <IncidentInsuranceModule />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'compliance' && (
+              <ProtectedRoute requiredModule="compliance">
+                <ComplianceDocumentModule />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'disposal' && (
+              <ProtectedRoute requiredModule="disposal">
+                <VehicleDisposalModule />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'reporting' && (
+              <ProtectedRoute requiredModule="analytics">
+                <ReportingAnalyticsDashboard />
+              </ProtectedRoute>
+            )}
+            {activeModule === 'users' && (
+              <ProtectedRoute requiredModule="users">
+                <UserModule />
+              </ProtectedRoute>
+            )}
           </div>
         </main>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal 
+        isOpen={showChangePassword} 
+        onClose={() => setShowChangePassword(false)} 
+      />
     </div>
   );
 }
