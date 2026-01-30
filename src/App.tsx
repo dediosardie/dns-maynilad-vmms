@@ -36,7 +36,7 @@ function App() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   // Role-based access control
-  const { userRole, loading: roleLoading, hasModuleAccess } = useRoleAccess();
+  const { userRole, loading: roleLoading } = useRoleAccess();
   const { hasPageAccess, loading: pageAccessLoading } = usePageAccess();
 
   // Check authentication status on mount
@@ -107,7 +107,7 @@ function App() {
       
       // Map paths to activeModule values
       const pathToModule: Record<string, ActiveModule> = {
-        '/dashboard': 'reporting',
+        '/reports': 'reporting',
         '/trips': 'trips',
         '/vehicles': 'vehicles',
       };
@@ -124,7 +124,7 @@ function App() {
     if (!authLoading && !roleLoading && !pageAccessLoading && user && userRole) {
       // Map activeModule to paths
       const moduleToPat: Record<ActiveModule, string> = {
-        'reporting': '/dashboard',
+        'reporting': '/reports',
         'vehicles': '/vehicles',
         'drivers': '/drivers',
         'trips': '/trips',
@@ -308,19 +308,15 @@ function App() {
   ];
 
   // Filter nav items based on page_restrictions (PRIMARY) from database
-  // page_restrictions table is the authoritative source for access control
+  // page_restrictions table is the ONLY authoritative source for access control
+  // rolePermissions (ROLE_MODULE_ACCESS) is NOT used for filtering - database controls everything
   const accessibleNavItems = navItems.filter(item => {
-    // PRIMARY: Check database page restrictions (authoritative)
+    // ONLY CHECK: Database page restrictions (authoritative and exclusive)
     const pageAllowed = hasPageAccess(item.path);
     
-    if (!pageAllowed) {
-      return false; // Database denied access
-    }
+    console.log(`🔍 [Nav Filter] Checking ${item.label} (${item.path}): ${pageAllowed ? '✅ ALLOWED' : '❌ DENIED'}`);
     
-    // SECONDARY: Module access check (defense in depth)
-    const moduleAllowed = hasModuleAccess(item.module);
-    
-    return pageAllowed && moduleAllowed;
+    return pageAllowed; // Database is the single source of truth
   });
 
   return (
@@ -699,52 +695,52 @@ function App() {
         <main className="flex-1 overflow-auto bg-slate-50">
           <div className="p-4 md:p-6 lg:p-8">
             {activeModule === 'vehicles' && (
-              <ProtectedRoute requiredModule="vehicles" pagePath="/vehicles">
+              <ProtectedRoute pagePath="/vehicles">
                 <VehicleModule />
               </ProtectedRoute>
             )}
             {activeModule === 'drivers' && (
-              <ProtectedRoute requiredModule="drivers" pagePath="/drivers">
+              <ProtectedRoute pagePath="/drivers">
                 <DriverModule />
               </ProtectedRoute>
             )}
             {activeModule === 'maintenance' && (
-              <ProtectedRoute requiredModule="maintenance" pagePath="/maintenance">
+              <ProtectedRoute pagePath="/maintenance">
                 <MaintenanceModule vehicles={vehicles.map(v => ({ id: v.id, plate_number: v.plate_number }))} />
               </ProtectedRoute>
             )}
             {activeModule === 'trips' && (
-              <ProtectedRoute requiredModule="trips" pagePath="/trips">
+              <ProtectedRoute pagePath="/trips">
                 <TripModule />
               </ProtectedRoute>
             )}
             {activeModule === 'fuel' && (
-              <ProtectedRoute requiredModule="fuel" pagePath="/fuel">
+              <ProtectedRoute pagePath="/fuel">
                 <FuelTrackingModule />
               </ProtectedRoute>
             )}
             {activeModule === 'incidents' && (
-              <ProtectedRoute requiredModule="incidents" pagePath="/incidents">
+              <ProtectedRoute pagePath="/incidents">
                 <IncidentInsuranceModule />
               </ProtectedRoute>
             )}
             {activeModule === 'compliance' && (
-              <ProtectedRoute requiredModule="compliance" pagePath="/compliance">
+              <ProtectedRoute pagePath="/compliance">
                 <ComplianceDocumentModule />
               </ProtectedRoute>
             )}
             {activeModule === 'disposal' && (
-              <ProtectedRoute requiredModule="disposal" pagePath="/disposal">
+              <ProtectedRoute pagePath="/disposal">
                 <VehicleDisposalModule />
               </ProtectedRoute>
             )}
             {activeModule === 'reporting' && (
-              <ProtectedRoute requiredModule="analytics" pagePath="/reports">
+              <ProtectedRoute pagePath="/reports">
                 <ReportingAnalyticsDashboard />
               </ProtectedRoute>
             )}
             {activeModule === 'users' && (
-              <ProtectedRoute requiredModule="users" pagePath="/users">
+              <ProtectedRoute pagePath="/users">
                 <UserModule />
               </ProtectedRoute>
             )}

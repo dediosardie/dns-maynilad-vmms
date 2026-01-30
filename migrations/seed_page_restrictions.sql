@@ -2,11 +2,11 @@
 -- Run this after creating page_restrictions table
 -- This populates initial access rules based on role requirements
 
--- Dashboard (all roles can access)
+-- Reports/Dashboard (main analytics page)
 INSERT INTO page_restrictions (page_name, page_path, page_description, 
   fleet_manager_access, maintenance_team_access, driver_access, administration_access, client_company_liaison_access, is_active)
 VALUES 
-  ('Dashboard', '/dashboard', 'Main dashboard with analytics overview', 
+  ('Dashboard', '/reports', 'Main dashboard with analytics and reporting', 
    true, true, true, true, true, true)
 ON CONFLICT (page_path) DO UPDATE SET
   updated_at = NOW();
@@ -65,15 +65,6 @@ VALUES
 ON CONFLICT (page_path) DO UPDATE SET
   updated_at = NOW();
 
--- Reports
-INSERT INTO page_restrictions (page_name, page_path, page_description,
-  fleet_manager_access, maintenance_team_access, driver_access, administration_access, client_company_liaison_access, is_active)
-VALUES
-  ('Reports', '/reports', 'Reporting and analytics',
-   true, false, false, true, true, true)
-ON CONFLICT (page_path) DO UPDATE SET
-  updated_at = NOW();
-
 -- Compliance Documents
 INSERT INTO page_restrictions (page_name, page_path, page_description,
   fleet_manager_access, maintenance_team_access, driver_access, administration_access, client_company_liaison_access, is_active)
@@ -127,3 +118,4 @@ BEGIN
   RAISE NOTICE '🔐 Access control is now active and database-driven';
   RAISE NOTICE '⚙️  Administrators can modify via Page Restrictions UI';
 END $$;
+2

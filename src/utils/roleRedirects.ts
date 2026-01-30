@@ -12,10 +12,10 @@ import { UserRole } from '../config/rolePermissions';
  */
 export const ROLE_DEFAULT_PAGES: Record<UserRole, string> = {
   driver: '/trips',
-  administration: '/dashboard',
+  administration: '/reports',
   maintenance_team: '/vehicles',
-  fleet_manager: '/dashboard',
-  client_company_liaison: '/dashboard',
+  fleet_manager: '/reports',
+  client_company_liaison: '/reports',
 };
 
 /**
@@ -26,7 +26,7 @@ export function getRoleDefaultPage(role: UserRole | null | undefined): string {
     return '/login';
   }
   
-  return ROLE_DEFAULT_PAGES[role] || '/dashboard';
+  return ROLE_DEFAULT_PAGES[role] || '/reports';
 }
 
 /**
@@ -44,10 +44,10 @@ export function checkRoleAccess(
   // Define which paths each role can access
   const roleAccessMap: Record<UserRole, string[]> = {
     driver: ['/trips', '/vehicles', '/fuel', '/incidents'],
-    administration: ['/dashboard', '/vehicles', '/drivers', '/maintenance', '/trips', '/fuel', '/incidents', '/reports', '/compliance', '/disposal', '/analytics', '/users', '/page-restrictions'],
-    maintenance_team: ['/vehicles', '/maintenance', '/incidents'],
-    fleet_manager: ['/dashboard', '/vehicles', '/drivers', '/maintenance', '/trips', '/fuel', '/incidents', '/reports', '/compliance', '/disposal', '/analytics'],
-    client_company_liaison: ['/dashboard', '/vehicles', '/reports', '/compliance'],
+    administration: ['/reports', '/vehicles', '/drivers', '/maintenance', '/trips', '/fuel', '/incidents', '/compliance', '/disposal', '/analytics', '/users', '/page-restrictions'],
+    maintenance_team: ['/vehicles', '/maintenance', '/incidents', '/disposal', '/reports'],
+    fleet_manager: ['/reports', '/vehicles', '/drivers', '/maintenance', '/trips', '/fuel', '/incidents', '/compliance', '/disposal', '/analytics'],
+    client_company_liaison: ['/reports', '/vehicles', '/compliance'],
   };
 
   const allowedPaths = roleAccessMap[role] || [];

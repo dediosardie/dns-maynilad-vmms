@@ -91,7 +91,12 @@ export default function PageRestrictionTable({
             </tr>
           ) : (
             restrictions.map((restriction) => (
-              <tr key={restriction.id} className="hover:bg-slate-50">
+              <tr 
+                key={restriction.id} 
+                className="hover:bg-slate-50 cursor-pointer"
+                onDoubleClick={() => onEdit(restriction)}
+                title="Double-click to edit"
+              >
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm font-medium text-slate-900">
                     {restriction.page_name}
