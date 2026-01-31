@@ -107,7 +107,11 @@ export default function TripTable({
           </thead>
           <tbody className="bg-bg-secondary divide-y divide-border-muted">
             {trips.map((trip) => (
-              <tr key={trip.id} className="hover:bg-bg-elevated transition-colors">
+              <tr 
+                key={trip.id} 
+                className="hover:bg-bg-elevated transition-colors cursor-pointer"
+                onDoubleClick={() => onEdit(trip)}
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {getVehicleInfo(trip.vehicle_id)}
                 </td>

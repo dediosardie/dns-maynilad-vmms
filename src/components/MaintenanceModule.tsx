@@ -137,8 +137,8 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
               <p className="text-sm font-medium text-text-secondary">Total Records</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{maintenances.length}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
             </div>
@@ -150,8 +150,8 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
               <p className="text-sm font-medium text-text-secondary">Pending</p>
               <p className="text-2xl font-bold text-amber-600 mt-1">{maintenances.filter(m => m.status === 'pending').length}</p>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -163,8 +163,8 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
               <p className="text-sm font-medium text-text-secondary">Completed</p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{maintenances.filter(m => m.status === 'completed').length}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -181,8 +181,9 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
           </div>
           <Button
             onClick={handleAddMaintenance}
-            variant="primary"
-            size="md"
+              variant="primary"
+              size="md"
+              className="inline-flex items-center"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

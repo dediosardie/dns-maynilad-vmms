@@ -5,10 +5,17 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  size?: 'default' | 'large' | 'full';
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, size = 'default' }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+
+  const sizeClasses = {
+    default: 'max-w-3xl',
+    large: 'max-w-6xl',
+    full: 'max-w-[95vw]'
+  };
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -40,7 +47,7 @@ export default function Modal({ isOpen, onClose, title, children }: ModalProps) 
         {/* Modal */}
         <div
           ref={modalRef}
-          className="relative bg-bg-secondary rounded-xl shadow-soft border border-border-muted w-full max-w-3xl max-h-[90vh] overflow-hidden"
+          className={`relative bg-bg-secondary rounded-xl shadow-soft border border-border-muted w-full ${sizeClasses[size]} max-h-[90vh] overflow-hidden`}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-border-muted">

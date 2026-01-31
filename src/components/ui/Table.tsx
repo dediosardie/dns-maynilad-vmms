@@ -3,7 +3,7 @@ import { HTMLAttributes, TdHTMLAttributes, ThHTMLAttributes, forwardRef } from '
 const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className = '', children, ...props }, ref) => {
     return (
-      <div className="w-full overflow-auto">
+      <div className="w-full overflow-auto max-h-[600px]">
         <table
           ref={ref}
           className={`w-full text-sm ${className}`.trim()}
@@ -23,7 +23,7 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HT
     return (
       <thead
         ref={ref}
-        className={`border-b border-border-muted ${className}`.trim()}
+        className={`border-b border-border-muted bg-bg-elevated sticky top-0 z-10 ${className}`.trim()}
         {...props}
       >
         {children}

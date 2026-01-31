@@ -101,7 +101,11 @@ export default function FuelTransactionTable({
           </thead>
           <tbody className="bg-bg-secondary divide-y divide-border-muted">
             {transactions.map((transaction) => (
-              <tr key={transaction.id} className="hover:bg-bg-elevated transition-colors">
+              <tr 
+                key={transaction.id} 
+                className="hover:bg-bg-elevated transition-colors cursor-pointer"
+                onDoubleClick={() => onEdit(transaction)}
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                   {getVehicleInfo(transaction.vehicle_id)}
                 </td>

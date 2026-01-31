@@ -18,7 +18,21 @@ export default function VehicleDisposalModule() {
   const [selectedRequest, setSelectedRequest] = useState<DisposalRequest | undefined>();
   const [selectedAuction, setSelectedAuction] = useState<DisposalAuction | undefined>();
   const [isLoading, setIsLoading] = useState(true);
+  const [editingRequest, setEditingRequest] = useState<DisposalRequest | undefined>();
+  const [isEditRequestModalOpen, setIsEditRequestModalOpen] = useState(false);
 
+  // Format number with thousand separators
+  const formatNumber = (num: number, decimals: number = 2): string => {
+    return num.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
+  };
+
+  // Format currency with Php prefix
+  const formatCurrency = (amount: number): string => {
+    return `Php ${formatNumber(amount, 2)}`;
+  };
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -287,7 +301,6 @@ export default function VehicleDisposalModule() {
               value={formData.starting_price}
               onChange={(e) => setFormData({...formData, starting_price: parseFloat(e.target.value)})}
               required
-              step="0.01"
               min="0"
             />
           </div>
@@ -300,7 +313,6 @@ export default function VehicleDisposalModule() {
               type="number"
               value={formData.reserve_price}
               onChange={(e) => setFormData({...formData, reserve_price: parseFloat(e.target.value)})}
-              step="0.01"
               min={formData.starting_price}
             />
           </div>
@@ -359,7 +371,7 @@ export default function VehicleDisposalModule() {
       e.preventDefault();
       // Validate bid amount per business rules
       if (formData.bid_amount < minimumBid) {
-        alert(`Minimum bid amount is $${minimumBid.toFixed(2)}`);
+        alert(`Minimum bid amount is ${formatCurrency(minimumBid)}`);
         return;
       }
       onSubmit(formData);
@@ -369,8 +381,8 @@ export default function VehicleDisposalModule() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="bg-accent-soft border border-border-muted rounded p-3 mb-4">
           <p className="text-sm text-text-primary">
-            <strong>Current Highest Bid:</strong> ${currentHighestBid.toFixed(2)}<br />
-            <strong>Minimum Next Bid:</strong> ${minimumBid.toFixed(2)}
+            <strong>Current Highest Bid:</strong> {formatCurrency(currentHighestBid)}<br />
+            <strong>Minimum Next Bid:</strong> {formatCurrency(minimumBid)}
           </p>
         </div>
 
@@ -437,18 +449,35 @@ export default function VehicleDisposalModule() {
   // Action: Submit Request (primary) - per markdown
   const handleSaveDisposalRequest = async (requestData: any) => {
     try {
-      const newRequest = await disposalService.createRequest(requestData);
-      setDisposalRequests([newRequest, ...disposalRequests]);
-      setIsRequestModalOpen(false);
+      if (editingRequest) {
+        // Update existing request
+        const updated = await disposalService.updateRequest(editingRequest.id, requestData);
+        setDisposalRequests(disposalRequests.map(r => r.id === updated.id ? updated : r));
+        setIsEditRequestModalOpen(false);
+        setEditingRequest(undefined);
+        notificationService.success(
+          'Disposal Request Updated',
+          `Disposal request ${updated.disposal_number} has been updated`
+        );
+        await auditLogService.createLog(
+          'Disposal Request Updated',
+          `Updated disposal request ${updated.disposal_number}`
+        );
+      } else {
+        // Create new request
+        const newRequest = await disposalService.createRequest(requestData);
+        setDisposalRequests([newRequest, ...disposalRequests]);
+        setIsRequestModalOpen(false);
       
-      notificationService.success(
-        'Disposal Request Created',
-        `Disposal request ${newRequest.disposal_number} has been submitted`
-      );
-      await auditLogService.createLog(
-        'Disposal Request Created',
-        `Created disposal request ${newRequest.disposal_number} for vehicle ${requestData.vehicle_id}`
-      );
+        notificationService.success(
+          'Disposal Request Created',
+          `Disposal request ${newRequest.disposal_number} has been submitted`
+        );
+        await auditLogService.createLog(
+          'Disposal Request Created',
+          `Created disposal request ${newRequest.disposal_number} for vehicle ${requestData.vehicle_id}`
+        );
+      }
     } catch (error: any) {
       console.error('Failed to save disposal request:', error);
       notificationService.error('Failed to Create Request', error.message || 'Unable to save disposal request.');
@@ -496,7 +525,7 @@ export default function VehicleDisposalModule() {
       
       notificationService.success(
         'Auction Created',
-        `${newAuction.auction_type} auction created with starting price $${newAuction.starting_price}`
+        `${newAuction.auction_type} auction created with starting price ${formatCurrency(newAuction.starting_price)}`
       );
       await auditLogService.createLog(
         'Auction Created',
@@ -526,11 +555,11 @@ export default function VehicleDisposalModule() {
       
       notificationService.success(
         'Bid Submitted',
-        `Bid of $${newBid.bid_amount} has been placed successfully`
+        `Bid of ${formatCurrency(newBid.bid_amount)} has been placed successfully`
       );
       await auditLogService.createLog(
         'Bid Submitted',
-        `Placed bid of $${newBid.bid_amount} by ${newBid.bidder_name}`
+        `Placed bid of ${formatCurrency(newBid.bid_amount)} by ${newBid.bidder_name}`
       );
     } catch (error: any) {
       console.error('Failed to submit bid:', error);
@@ -539,8 +568,31 @@ export default function VehicleDisposalModule() {
     }
   };
 
+  // Action: Start Auction
+  const handleStartAuction = async (auctionId: string) => {
+    try {
+      const auction = auctions.find(a => a.id === auctionId);
+      if (!auction) return;
+      
+      await disposalService.updateAuction(auctionId, { auction_status: 'active' });
+      setAuctions(auctions.map(a => a.id === auctionId ? { ...a, auction_status: 'active' } : a));
+      
+      notificationService.success(
+        'Auction Started',
+        `${auction.auction_type} auction is now active`
+      );
+      await auditLogService.createLog(
+        'Auction Started',
+        `Started ${auction.auction_type} auction`
+      );
+    } catch (error: any) {
+      console.error('Failed to start auction:', error);
+      notificationService.error('Failed to Start Auction', error.message || 'Unable to start auction.');
+    }
+  };
+
   // Action: Close Auction (success) - per markdown
-  const handleCloseAuction = (auctionId: string) => {
+  const handleCloseAuction = async (auctionId: string) => {
     const auction = auctions.find(a => a.id === auctionId);
     if (!auction) return;
 
@@ -558,17 +610,99 @@ export default function VehicleDisposalModule() {
       return;
     }
 
-    setAuctions(auctions.map(a =>
-      a.id === auctionId
-        ? { ...a, auction_status: 'closed', winner_id: winningBid.bidder_name, winning_bid: winningBid.bid_amount }
-        : a
-    ));
-    // Update disposal request status
-    setDisposalRequests(disposalRequests.map(r =>
-      r.id === auction.disposal_id
-        ? { ...r, status: 'sold', updated_at: new Date().toISOString() }
-        : r
-    ));
+    try {
+      await disposalService.updateAuction(auctionId, { 
+        auction_status: 'closed', 
+        winner_id: winningBid.bidder_name, 
+        winning_bid: winningBid.bid_amount 
+      });
+      
+      setAuctions(auctions.map(a =>
+        a.id === auctionId
+          ? { ...a, auction_status: 'closed', winner_id: winningBid.bidder_name, winning_bid: winningBid.bid_amount }
+          : a
+      ));
+      
+      // Update disposal request status
+      const updatedRequest = await disposalService.updateRequest(auction.disposal_id, { status: 'sold' });
+      setDisposalRequests(disposalRequests.map(r =>
+        r.id === auction.disposal_id ? updatedRequest : r
+      ));
+      
+      notificationService.success(
+        'Auction Closed',
+        `Auction closed with winning bid of ${formatCurrency(winningBid.bid_amount)}`
+      );
+      await auditLogService.createLog(
+        'Auction Closed',
+        `Closed auction with winning bid of ${formatCurrency(winningBid.bid_amount)} by ${winningBid.bidder_name}`
+      );
+    } catch (error: any) {
+      console.error('Failed to close auction:', error);
+      notificationService.error('Failed to Close Auction', error.message || 'Unable to close auction.');
+    }
+  };
+
+  // Action: Award Auction
+  const handleAwardAuction = async (auctionId: string) => {
+    try {
+      const auction = auctions.find(a => a.id === auctionId);
+      if (!auction) return;
+      
+      await disposalService.updateAuction(auctionId, { auction_status: 'awarded' });
+      setAuctions(auctions.map(a => a.id === auctionId ? { ...a, auction_status: 'awarded' } : a));
+      
+      // Update disposal request status
+      const updatedRequest = await disposalService.updateRequest(auction.disposal_id, { status: 'transferred' });
+      setDisposalRequests(disposalRequests.map(r =>
+        r.id === auction.disposal_id ? updatedRequest : r
+      ));
+      
+      notificationService.success(
+        'Auction Awarded',
+        `Vehicle awarded to ${auction.winner_id}`
+      );
+      await auditLogService.createLog(
+        'Auction Awarded',
+        `Awarded vehicle to ${auction.winner_id}`
+      );
+    } catch (error: any) {
+      console.error('Failed to award auction:', error);
+      notificationService.error('Failed to Award Auction', error.message || 'Unable to award auction.');
+    }
+  };
+
+  // Action: Cancel Auction
+  const handleCancelAuction = async (auctionId: string) => {
+    const auction = auctions.find(a => a.id === auctionId);
+    if (!auction) return;
+    
+    if (!window.confirm('Are you sure you want to cancel this auction?')) {
+      return;
+    }
+    
+    try {
+      await disposalService.updateAuction(auctionId, { auction_status: 'cancelled' });
+      setAuctions(auctions.map(a => a.id === auctionId ? { ...a, auction_status: 'cancelled' } : a));
+      
+      // Revert disposal request status
+      const updatedRequest = await disposalService.updateRequest(auction.disposal_id, { status: 'listed' });
+      setDisposalRequests(disposalRequests.map(r =>
+        r.id === auction.disposal_id ? updatedRequest : r
+      ));
+      
+      notificationService.success(
+        'Auction Cancelled',
+        `Auction has been cancelled`
+      );
+      await auditLogService.createLog(
+        'Auction Cancelled',
+        `Cancelled ${auction.auction_type} auction`
+      );
+    } catch (error: any) {
+      console.error('Failed to cancel auction:', error);
+      notificationService.error('Failed to Cancel Auction', error.message || 'Unable to cancel auction.');
+    }
   };
 
   // Calculate stats
@@ -593,7 +727,7 @@ export default function VehicleDisposalModule() {
               <p className="text-sm font-medium text-text-secondary">Pending Requests</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{pendingRequests}</p>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -607,7 +741,7 @@ export default function VehicleDisposalModule() {
               <p className="text-sm font-medium text-text-secondary">Active Auctions</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{activeAuctions}</p>
             </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
@@ -621,7 +755,7 @@ export default function VehicleDisposalModule() {
               <p className="text-sm font-medium text-text-secondary">Total Disposals</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{totalDisposals}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -633,9 +767,9 @@ export default function VehicleDisposalModule() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-text-secondary">Total Revenue</p>
-              <p className="text-2xl font-bold text-text-primary mt-1">${totalRevenue.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">Php {totalRevenue.toLocaleString()}</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -653,7 +787,10 @@ export default function VehicleDisposalModule() {
               <p className="text-sm text-text-secondary mt-1">Manage disposal requests and auctions</p>
             </div>
             {/* Action: Submit Disposal Request (primary) */}
-            <Button onClick={() => setIsRequestModalOpen(true)} variant="primary">
+            <Button onClick={() => setIsRequestModalOpen(true)}                 
+                variant="primary"                 
+                size="md"
+                className="inline-flex items-center">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
@@ -688,12 +825,19 @@ export default function VehicleDisposalModule() {
                     const vehicle = vehicles.find(v => v.id === request.vehicle_id);
                     const auction = auctions.find(a => a.disposal_id === request.id);
                     return (
-                      <tr key={request.id} className="hover:bg-bg-elevated">
+                      <tr 
+                        key={request.id} 
+                        className="hover:bg-bg-elevated cursor-pointer transition-colors"
+                        onDoubleClick={() => {
+                          setEditingRequest(request);
+                          setIsEditRequestModalOpen(true);
+                        }}
+                      >
                         <td className="px-4 py-3 text-sm font-medium text-text-primary">
                           {vehicle ? `${vehicle.plate_number}${vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - ${vehicle.make} ${vehicle.model}` : 'Unknown'}
                         </td>
                         <td className="px-4 py-3 text-sm text-text-secondary capitalize">{request.disposal_reason.replace('_', ' ')}</td>
-                        <td className="px-4 py-3 text-sm text-text-secondary">${request.estimated_value.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">{formatCurrency(request.estimated_value)}</td>
                         <td className="px-4 py-3 text-sm text-text-secondary capitalize">{request.recommended_method.replace('_', ' ')}</td>
                         <td className="px-4 py-3 text-sm">
                           <Badge variant={
@@ -756,10 +900,17 @@ export default function VehicleDisposalModule() {
                 </thead>
                 <tbody className="bg-bg-secondary divide-y divide-border-muted">
                   {auctions.map((auction) => (
-                    <tr key={auction.id} className="hover:bg-bg-elevated">
+                    <tr 
+                      key={auction.id} 
+                      className="hover:bg-bg-elevated cursor-pointer transition-colors"
+                      onDoubleClick={() => {
+                        setSelectedAuction(auction);
+                        setIsBidModalOpen(true);
+                      }}
+                    >
                       <td className="px-4 py-3 text-sm font-medium text-text-primary">{auction.auction_type} Auction</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">${auction.starting_price.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm text-text-secondary">${(auction.current_highest_bid || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">{formatCurrency(auction.starting_price)}</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">{formatCurrency(auction.current_highest_bid || 0)}</td>
                       <td className="px-4 py-3 text-sm text-text-secondary">{auction.total_bids || 0}</td>
                       <td className="px-4 py-3 text-sm text-text-secondary">{new Date(auction.end_date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-sm">
@@ -773,11 +924,26 @@ export default function VehicleDisposalModule() {
                         </Badge>
                       </td>
                       <td className="px-4 py-3 text-right text-sm space-x-2">
+                        {auction.auction_status === 'scheduled' && (
+                          <>
+                            <Button size="sm" variant="primary" onClick={(e) => { e.stopPropagation(); handleStartAuction(auction.id); }}>Start Auction</Button>
+                            <Button size="sm" variant="danger" onClick={(e) => { e.stopPropagation(); handleCancelAuction(auction.id); }}>Cancel</Button>
+                          </>
+                        )}
                         {auction.auction_status === 'active' && (
                           <>
-                            <Button size="sm" variant="primary" onClick={() => { setSelectedAuction(auction); setIsBidModalOpen(true); }}>Place Bid</Button>
-                            <Button size="sm" variant="primary" onClick={() => handleCloseAuction(auction.id)}>Close</Button>
+                            <Button size="sm" variant="primary" onClick={(e) => { e.stopPropagation(); setSelectedAuction(auction); setIsBidModalOpen(true); }}>Place Bid</Button>
+                            <Button size="sm" variant="primary" onClick={(e) => { e.stopPropagation(); handleCloseAuction(auction.id); }}>Close</Button>
                           </>
+                        )}
+                        {auction.auction_status === 'closed' && (
+                          <Button size="sm" variant="primary" onClick={(e) => { e.stopPropagation(); handleAwardAuction(auction.id); }}>Award to Winner</Button>
+                        )}
+                        {auction.auction_status === 'awarded' && (
+                          <Badge variant="success">Completed</Badge>
+                        )}
+                        {auction.auction_status === 'cancelled' && (
+                          <Badge variant="danger">Cancelled</Badge>
                         )}
                       </td>
                     </tr>
@@ -792,6 +958,10 @@ export default function VehicleDisposalModule() {
       {/* Modals */}
       <Modal isOpen={isRequestModalOpen} onClose={() => setIsRequestModalOpen(false)} title="New Disposal Request">
         <DisposalRequestForm onSubmit={handleSaveDisposalRequest} onClose={() => setIsRequestModalOpen(false)} />
+      </Modal>
+
+      <Modal isOpen={isEditRequestModalOpen} onClose={() => { setIsEditRequestModalOpen(false); setEditingRequest(undefined); }} title="Edit Disposal Request">
+        <DisposalRequestForm initialData={editingRequest} onSubmit={handleSaveDisposalRequest} onClose={() => { setIsEditRequestModalOpen(false); setEditingRequest(undefined); }} />
       </Modal>
 
       {selectedRequest && (

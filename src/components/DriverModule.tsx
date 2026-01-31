@@ -175,7 +175,9 @@ export default function DriverModule() {
             <h2 className="text-xl font-semibold text-text-primary">Driver Management</h2>
             <p className="text-sm text-text-secondary mt-1">Manage driver records and licensing</p>
           </div>
-          <Button onClick={handleAddDriver} variant="primary">
+          <Button onClick={handleAddDriver} variant="primary"
+              size="md"
+              className="inline-flex items-center">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>

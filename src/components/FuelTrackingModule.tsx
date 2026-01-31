@@ -4,10 +4,13 @@ import { FuelTransaction, Vehicle, Driver } from '../types';
 import FuelTransactionTable from './FuelTransactionTable';
 import FuelTransactionForm from './FuelTransactionForm';
 import Modal from './Modal';
+import FuelEfficiencyReport from './FuelEfficiencyReport';
+import OpenAIConfigModal from './OpenAIConfigModal';
 import { Card, Button } from './ui';
 import { fuelService, vehicleService, driverService } from '../services/supabaseService';
 import { notificationService } from '../services/notificationService';
 import { auditLogService } from '../services/auditLogService';
+import { openaiService } from '../services/openaiService';
 // Format number with thousand separators
 const formatNumber = (num: number, decimals: number = 2): string => {
   return num.toLocaleString('en-US', {
@@ -27,6 +30,13 @@ export default function FuelTrackingModule() {
   const [editingTransaction, setEditingTransaction] = useState<FuelTransaction | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // AI Analysis state
+  const [showEfficiencyReport, setShowEfficiencyReport] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisError, setAnalysisError] = useState<string>('');
+  const [showConfigModal, setShowConfigModal] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -148,9 +158,65 @@ export default function FuelTrackingModule() {
     }
   };
 
-  // Action: View Efficiency Report (secondary, opens analytics view)
-  const handleViewEfficiency = () => {
-    alert('Efficiency Report\n(Analytics dashboard would be displayed here)');
+  // Action: View Efficiency Report (secondary, opens analytics view with AI analysis)
+  const handleViewEfficiency = async () => {
+    // Check if OpenAI is configured
+    if (!openaiService.isConfigured()) {
+      setShowConfigModal(true);
+      return;
+    }
+
+    try {
+      setShowEfficiencyReport(true);
+      setIsAnalyzing(true);
+      setAnalysisError('');
+      setAiAnalysis(null);
+
+      // Run AI-driven analysis using ChatGPT-4o
+      const analysis = await openaiService.analyzeFuelEfficiency(
+        transactions,
+        vehicles,
+        drivers
+      );
+
+      setAiAnalysis(analysis);
+      
+      notificationService.success(
+        'AI Analysis Complete',
+        'Fuel efficiency report generated successfully'
+      );
+      
+      await auditLogService.createLog(
+        'AI Fuel Analysis Generated',
+        `Generated AI-driven fuel efficiency report with ${analysis.insights.length} insights`
+      );
+    } catch (error: any) {
+      console.error('AI Analysis failed:', error);
+      setAnalysisError(error.message || 'Failed to generate AI analysis');
+      notificationService.error(
+        'Analysis Failed',
+        error.message || 'Unable to generate AI analysis'
+      );
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleConfigureOpenAI = (apiKey: string) => {
+    openaiService.setApiKey(apiKey);
+    setShowConfigModal(false);
+    notificationService.success(
+      'GitHub AI Configured',
+      'Token saved successfully. You can now use AI analysis with your Copilot subscription.'
+    );
+    // Automatically trigger analysis after configuration
+    handleViewEfficiency();
+  };
+
+  const handleCloseReport = () => {
+    setShowEfficiencyReport(false);
+    setAiAnalysis(null);
+    setAnalysisError('');
   };
 
   const handleEditTransaction = (transaction: FuelTransaction) => {
@@ -197,8 +263,8 @@ export default function FuelTrackingModule() {
               <p className="text-sm font-medium text-text-secondary">Total Liters</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{formatNumber(totalLiters, 2)} L</p>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
@@ -211,8 +277,8 @@ export default function FuelTrackingModule() {
               <p className="text-sm font-medium text-text-secondary">Total Cost</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(totalCost)}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
@@ -225,8 +291,8 @@ export default function FuelTrackingModule() {
               <p className="text-sm font-medium text-text-secondary">Avg Cost/Liter</p>
               <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(avgCostPerLiter)}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
@@ -248,6 +314,7 @@ export default function FuelTrackingModule() {
                 onClick={handleViewEfficiency}
                 variant="secondary"
                 size="md"
+                className="inline-flex items-center"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -259,6 +326,7 @@ export default function FuelTrackingModule() {
                 onClick={handleAddTransaction}
                 variant="primary"
                 size="md"
+                className="inline-flex items-center"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -302,6 +370,35 @@ export default function FuelTrackingModule() {
           drivers={drivers}
         />
       </Modal>
+
+      {/* AI-Driven Efficiency Report Modal */}
+      {showEfficiencyReport && (
+        <Modal
+          isOpen={showEfficiencyReport}
+          onClose={handleCloseReport}
+          title="AI-Driven Fuel Efficiency Analysis"
+          size="large"
+        >
+          <FuelEfficiencyReport
+            analysis={aiAnalysis}
+            isLoading={isAnalyzing}
+            error={analysisError}
+            onClose={handleCloseReport}
+            onConfigure={() => {
+              handleCloseReport();
+              setShowConfigModal(true);
+            }}
+          />
+        </Modal>
+      )}
+
+      {/* OpenAI Configuration Modal */}
+      {showConfigModal && (
+        <OpenAIConfigModal
+          onSave={handleConfigureOpenAI}
+          onClose={() => setShowConfigModal(false)}
+        />
+      )}
     </div>
   );
 }

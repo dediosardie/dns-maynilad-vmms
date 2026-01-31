@@ -54,7 +54,11 @@ export default function UserTable({ users, onDelete, onEdit, onToggleStatus }: U
         </thead>
         <tbody className="bg-bg-secondary divide-y divide-border-muted">
           {users.map((user) => (
-            <tr key={user.id} className="hover:bg-bg-elevated transition-colors">
+            <tr 
+              key={user.id} 
+              className="hover:bg-bg-elevated transition-colors cursor-pointer"
+              onDoubleClick={() => onEdit?.(user)}
+            >
               <td className="px-6 py-4 whitespace-nowrap">
                 <div className="flex items-center">
                   <div className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-accent to-accent-hover rounded-full flex items-center justify-center">

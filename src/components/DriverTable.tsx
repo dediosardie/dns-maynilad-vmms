@@ -43,7 +43,11 @@ export default function DriverTable({ drivers, onSuspend, onEdit }: DriverTableP
           </TableHeader>
           <TableBody>
             {drivers.map((driver) => (
-              <TableRow key={driver.id}>
+              <TableRow 
+                key={driver.id}
+                onDoubleClick={() => onEdit(driver)}
+                className="cursor-pointer"
+              >
                 <TableCell className="font-medium">
                   {driver.full_name}
                 </TableCell>

@@ -67,7 +67,11 @@ export default function MaintenanceTable({ maintenances, vehicles, onMarkComplet
           </thead>
           <tbody className="bg-bg-secondary divide-y divide-border-muted">
             {maintenances.map((maintenance) => (
-              <tr key={maintenance.id} className="hover:bg-bg-elevated transition-colors">
+              <tr 
+                key={maintenance.id} 
+                className="hover:bg-bg-elevated transition-colors cursor-pointer"
+                onDoubleClick={() => onEdit(maintenance)}
+              >
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                   {getVehiclePlate(maintenance.vehicle_id)}
                 </td>

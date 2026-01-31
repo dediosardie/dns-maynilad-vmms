@@ -783,6 +783,18 @@ export const disposalService = {
     return data;
   },
 
+  async updateAuction(id: string, auction: Partial<DisposalAuction>): Promise<DisposalAuction> {
+    const { data, error } = await supabase
+      .from('disposal_auctions')
+      .update(auction)
+      .eq('id', id)
+      .select();
+    
+    if (error) throw error;
+    if (!data || data.length === 0) throw new Error('Auction not found');
+    return data[0];
+  },
+
   async getAuctionsByDisposal(disposalId: string): Promise<DisposalAuction[]> {
     const { data, error } = await supabase
       .from('disposal_auctions')
