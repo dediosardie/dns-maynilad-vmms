@@ -1,5 +1,6 @@
 // Trip Table Component - Defined per trip-scheduling-module.md
 import { Trip, Vehicle, Driver } from '../types';
+import { Button, Badge } from './ui';
 
 interface TripTableProps {
   trips: Trip[];
@@ -57,13 +58,13 @@ export default function TripTable({
   if (trips.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
-          <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-bg-elevated mb-4">
+          <svg className="w-8 h-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium text-slate-900 mb-1">No trips scheduled</h3>
-        <p className="text-slate-600">Get started by creating your first trip</p>
+        <h3 className="text-lg font-medium text-text-primary mb-1">No trips scheduled</h3>
+        <p className="text-text-secondary">Get started by creating your first trip</p>
       </div>
     );
   }
@@ -71,72 +72,72 @@ export default function TripTable({
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+        <table className="min-w-full divide-y divide-border-muted">
+          <thead className="bg-bg-elevated">
             <tr>
               {/* Columns match Trip Table definition in markdown */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Vehicle
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Driver
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Origin
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Destination
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Planned Departure
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Planned Arrival
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Distance (km)
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
+          <tbody className="bg-bg-secondary divide-y divide-border-muted">
             {trips.map((trip) => (
-              <tr key={trip.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+              <tr key={trip.id} className="hover:bg-bg-elevated transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {getVehicleInfo(trip.vehicle_id)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {getDriverInfo(trip.driver_id)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {trip.origin}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {trip.destination}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {new Date(trip.planned_departure).toLocaleString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {new Date(trip.planned_arrival).toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   {/* Status enum(planned, in_progress, completed, cancelled) */}
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    trip.status === 'planned' ? 'bg-blue-100 text-blue-800' :
-                    trip.status === 'in_progress' ? 'bg-amber-100 text-amber-800' :
-                    trip.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
-                    'bg-slate-100 text-slate-800'
-                  }`}>
+                  <Badge variant={
+                    trip.status === 'planned' ? 'accent' :
+                    trip.status === 'in_progress' ? 'warning' :
+                    trip.status === 'completed' ? 'success' :
+                    'default'
+                  }>
                     {trip.status.replace('_', ' ')}
-                  </span>
+                  </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {trip.distance_km.toFixed(1)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
@@ -144,59 +145,65 @@ export default function TripTable({
                   {trip.status === 'planned' && (
                     <>
                       {/* Update Trip (primary, submit) */}
-                      <button
+                      <Button
                         onClick={() => onEdit(trip)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
+                        variant="ghost"
+                        size="sm"
                         title="Edit"
                       >
                         Edit
-                      </button>
+                      </Button>
                       {/* Start Trip (success) */}
-                      <button
+                      <Button
                         onClick={() => handleStart(trip)}
-                        className="text-emerald-600 hover:text-emerald-900 transition-colors"
+                        variant="primary"
+                        size="sm"
                         title="Start Trip"
                       >
                         Start
-                      </button>
+                      </Button>
                       {/* Cancel Trip (danger) */}
-                      <button
+                      <Button
                         onClick={() => handleCancel(trip)}
-                        className="text-slate-600 hover:text-slate-900 transition-colors"
+                        variant="ghost"
+                        size="sm"
                         title="Cancel"
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </>
                   )}
                   {trip.status === 'in_progress' && (
                     <>
                       {/* Complete Trip (success) */}
-                      <button
+                      <Button
                         onClick={() => handleComplete(trip)}
-                        className="text-emerald-600 hover:text-emerald-900 transition-colors"
+                        variant="primary"
+                        size="sm"
                         title="Complete Trip"
                       >
                         Complete
-                      </button>
+                      </Button>
                       {/* View Route Map (secondary) */}
-                      <button
+                      <Button
                         onClick={() => onViewRoute(trip)}
-                        className="text-blue-600 hover:text-blue-900 transition-colors"
+                        variant="ghost"
+                        size="sm"
                         title="View Route"
                       >
                         Route
-                      </button>
+                      </Button>
                     </>
                   )}
                   {(trip.status === 'completed' || trip.status === 'cancelled') && (
-                    <button
+                    <Button
                       onClick={() => onViewRoute(trip)}
-                      className="text-blue-600 hover:text-blue-900 transition-colors"
+                      variant="ghost"
+                      size="sm"
                       title="View Details"
                     >
                       View
-                    </button>
+                    </Button>
                   )}
                 </td>
               </tr>

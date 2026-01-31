@@ -3,6 +3,7 @@ import { Maintenance } from '../types';
 import MaintenanceTable from './MaintenanceTable';
 import MaintenanceForm from './MaintenanceForm';
 import Modal from './Modal';
+import { Card, Button } from './ui';
 import { maintenanceStorage } from '../storage';
 import { notificationService } from '../services/notificationService';
 import { auditLogService } from '../services/auditLogService';
@@ -130,11 +131,11 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Records</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{maintenances.length}</p>
+              <p className="text-sm font-medium text-text-secondary">Total Records</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{maintenances.length}</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -142,11 +143,11 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Pending</p>
+              <p className="text-sm font-medium text-text-secondary">Pending</p>
               <p className="text-2xl font-bold text-amber-600 mt-1">{maintenances.filter(m => m.status === 'pending').length}</p>
             </div>
             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
@@ -155,11 +156,11 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Completed</p>
+              <p className="text-sm font-medium text-text-secondary">Completed</p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{maintenances.filter(m => m.status === 'completed').length}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
@@ -168,32 +169,33 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Main Content Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-slate-200">
+      <Card>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-border-muted">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">Maintenance Schedule</h2>
-            <p className="text-sm text-slate-600 mt-1">Track and manage vehicle maintenance</p>
+            <h2 className="text-xl font-semibold text-text-primary">Maintenance Schedule</h2>
+            <p className="text-sm text-text-secondary mt-1">Track and manage vehicle maintenance</p>
           </div>
-          <button
+          <Button
             onClick={handleAddMaintenance}
-            className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm"
+            variant="primary"
+            size="md"
           >
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             Schedule Maintenance
-          </button>
+          </Button>
         </div>
         
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-              <p className="text-slate-600 mt-4">Loading maintenance records...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+              <p className="text-text-secondary mt-4">Loading maintenance records...</p>
             </div>
           </div>
         ) : (
@@ -206,7 +208,7 @@ export default function MaintenanceModule({ vehicles }: MaintenanceModuleProps) 
             />
           </div>
         )}
-      </div>
+      </Card>
 
       <Modal
         isOpen={isModalOpen}

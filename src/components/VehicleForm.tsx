@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Vehicle } from '../types';
+import { Input, Select, Button } from './ui';
 
 interface VehicleFormProps {
   onSave: (vehicle: Omit<Vehicle, 'id'>) => void;
@@ -154,207 +155,144 @@ export default function VehicleForm({ onSave, onUpdate, initialData }: VehicleFo
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Plate Number <span className="text-red-600">*</span>
-          </label>
-          <input
-            type="text"
-            name="plate_number"
-            value={formData.plate_number}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
+        <Input
+          label="Plate Number"
+          type="text"
+          name="plate_number"
+          value={formData.plate_number}
+          onChange={handleChange}
+          required
+        />
+
+        <Input
+          label="Conduction Number"
+          type="text"
+          name="conduction_number"
+          value={formData.conduction_number}
+          onChange={handleChange}
+          helperText="(Use when plate not available)"
+        />
+
+        <Input
+          label="Make"
+          type="text"
+          name="make"
+          value={formData.make}
+          onChange={handleChange}
+          required
+        />
+
+        <Input
+          label="Model"
+          type="text"
+          name="model"
+          value={formData.model}
+          onChange={handleChange}
+          required
+        />
+
+        <Input
+          label="Variant"
+          type="text"
+          name="variant"
+          value={formData.variant || ''}
+          onChange={handleChange}
+          placeholder="e.g., Sport, Deluxe, Base"
+        />
+
+        <Input
+          label="Year"
+          type="number"
+          name="year"
+          value={formData.year}
+          onChange={handleChange}
+          required
+        />
+
+        <Input
+          label="VIN"
+          type="text"
+          name="vin"
+          value={formData.vin}
+          onChange={handleChange}
+          required
+        />
+
+        <Input
+          label="Engine Number"
+          type="text"
+          name="engine_number"
+          value={formData.engine_number || ''}
+          onChange={handleChange}
+        />
+
+        <Input
+          label="Fuel Capacity (Liters)"
+          type="number"
+          name="fuel_capacity"
+          value={formData.fuel_capacity || ''}
+          onChange={handleChange}
+          step="0.1"
+          min="0"
+          placeholder="e.g., 60"
+        />
+
+        <Select
+          label="Ownership Type"
+          name="ownership_type"
+          value={formData.ownership_type}
+          onChange={handleChange}
+          options={[
+            { value: 'Internal', label: 'Internal' },
+            { value: 'Leased', label: 'Leased' },
+            { value: 'Leased to Own', label: 'Leased to Own' },
+            { value: 'Shuttle', label: 'Shuttle' }
+          ]}
+        />
+
+        <Select
+          label="Status"
+          name="status"
+          value={formData.status}
+          onChange={handleChange}
+          options={[
+            { value: 'active', label: 'active' },
+            { value: 'maintenance', label: 'maintenance' },
+            { value: 'disposed', label: 'disposed' }
+          ]}
+        />
+
+        <Input
+          label="Insurance Expiry"
+          type="date"
+          name="insurance_expiry"
+          value={formData.insurance_expiry}
+          onChange={handleChange}
+        />
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Conduction Number
-            <span className="text-xs text-slate-500 ml-2">(Use when plate not available)</span>
-          </label>
-          <input
-            type="text"
-            name="conduction_number"
-            value={formData.conduction_number}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Make <span className="text-red-600">*</span>
-          </label>
-          <input
-            type="text"
-            name="make"
-            value={formData.make}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Model <span className="text-red-600">*</span>
-          </label>
-          <input
-            type="text"
-            name="model"
-            value={formData.model}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Variant
-          </label>
-          <input
-            type="text"
-            name="variant"
-            value={formData.variant || ''}
-            onChange={handleChange}
-            placeholder="e.g., Sport, Deluxe, Base"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Year <span className="text-red-600">*</span>
-          </label>
-          <input
-            type="number"
-            name="year"
-            value={formData.year}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            VIN <span className="text-red-600">*</span>
-          </label>
-          <input
-            type="text"
-            name="vin"
-            value={formData.vin}
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Engine Number
-          </label>
-          <input
-            type="text"
-            name="engine_number"
-            value={formData.engine_number || ''}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Fuel Capacity (Liters)
-          </label>
-          <input
-            type="number"
-            name="fuel_capacity"
-            value={formData.fuel_capacity || ''}
-            onChange={handleChange}
-            step="0.1"
-            min="0"
-            placeholder="e.g., 60"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Ownership Type
-          </label>
-          <select
-            name="ownership_type"
-            value={formData.ownership_type}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          >
-            <option value="Internal">Internal</option>
-            <option value="Leased">Leased</option>
-            <option value="Leased to Own">Leased to Own</option>
-            <option value="Shuttle">Shuttle</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Status
-          </label>
-          <select
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          >
-            <option value="active">active</option>
-            <option value="maintenance">maintenance</option>
-            <option value="disposed">disposed</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Insurance Expiry
-          </label>
-          <input
-            type="date"
-            name="insurance_expiry"
-            value={formData.insurance_expiry}
-            onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Registration Expiry
-            <span className="text-xs text-slate-500 ml-2">(Auto-calculated by LTO rules)</span>
-          </label>
-          <input
+          <Input
+            label="Registration Expiry"
             type="date"
             name="registration_expiry"
             value={formData.registration_expiry}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            helperText="Auto-calculated by LTO rules"
+            className="bg-bg-elevated"
             title="Automatically calculated based on plate number and vehicle age"
           />
           {formData.plate_number && formData.year && formData.registration_expiry && (
-            <p className="text-xs text-emerald-600 mt-1">
+            <p className="text-xs text-emerald-500 mt-1">
               ✓ Calculated based on plate ending and vehicle age
             </p>
           )}
         </div>
       </div>
 
-      <div className="mt-6 pt-6 border-t border-slate-200 flex justify-end gap-3">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-md hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
-        >
+      <div className="mt-6 pt-6 border-t border-border-muted flex justify-end gap-3">
+        <Button type="submit" variant="primary">
           {initialData ? 'Update Vehicle' : 'Save Vehicle'}
-        </button>
+        </Button>
       </div>
     </form>
   );

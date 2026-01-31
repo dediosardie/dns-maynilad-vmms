@@ -1,4 +1,5 @@
 import { PageRestriction } from '../types';
+import { Badge, Button } from './ui';
 
 interface PageRestrictionTableProps {
   restrictions: PageRestriction[];
@@ -19,73 +20,73 @@ export default function PageRestrictionTable({
   const getRoleAccessBadge = (hasAccess: boolean) => {
     if (hasAccess) {
       return (
-        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">
+        <Badge variant="success">
           ✓ Allowed
-        </span>
+        </Badge>
       );
     }
     return (
-      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800">
+      <Badge variant="danger">
         ✗ Denied
-      </span>
+      </Badge>
     );
   };
 
   const getStatusBadge = (isActive: boolean) => {
     if (isActive) {
       return (
-        <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+        <Badge variant="accent">
           Active
-        </span>
+        </Badge>
       );
     }
     return (
-      <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+      <Badge variant="default">
         Inactive
-      </span>
+      </Badge>
     );
   };
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
+      <table className="min-w-full divide-y divide-border-muted">
+        <thead className="bg-bg-elevated">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Page Name
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Path
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Fleet Manager
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Maintenance Team
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Driver
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Administration
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Client Liaison
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
               Status
             </th>
             {canModify && (
-              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Actions
               </th>
             )}
           </tr>
         </thead>
-        <tbody className="bg-white divide-y divide-slate-200">
+        <tbody className="bg-bg-secondary divide-y divide-border-muted">
           {restrictions.length === 0 ? (
             <tr>
-              <td colSpan={canModify ? 9 : 8} className="px-6 py-4 text-center text-sm text-slate-500">
+              <td colSpan={canModify ? 9 : 8} className="px-6 py-4 text-center text-sm text-text-muted">
                 No page restrictions found
               </td>
             </tr>
@@ -93,22 +94,22 @@ export default function PageRestrictionTable({
             restrictions.map((restriction) => (
               <tr 
                 key={restriction.id} 
-                className="hover:bg-slate-50 cursor-pointer"
+                className="hover:bg-bg-elevated cursor-pointer transition-colors"
                 onDoubleClick={() => onEdit(restriction)}
                 title="Double-click to edit"
               >
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-slate-900">
+                  <div className="text-sm font-medium text-text-primary">
                     {restriction.page_name}
                   </div>
                   {restriction.description && (
-                    <div className="text-xs text-slate-500 mt-1">
+                    <div className="text-xs text-text-muted mt-1">
                       {restriction.description}
                     </div>
                   )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-slate-600 font-mono">
+                  <div className="text-sm text-text-primary font-mono">
                     {restriction.page_path}
                   </div>
                 </td>
@@ -132,22 +133,26 @@ export default function PageRestrictionTable({
                 </td>
                 {canModify && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => onEdit(restriction)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (window.confirm(`Are you sure you want to delete the restriction for "${restriction.page_name}"?`)) {
-                          onDelete(restriction.id);
-                        }
-                      }}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        onClick={() => onEdit(restriction)}
+                        variant="ghost"
+                        size="sm"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          if (window.confirm(`Are you sure you want to delete the restriction for "${restriction.page_name}"?`)) {
+                            onDelete(restriction.id);
+                          }
+                        }}
+                        variant="danger"
+                        size="sm"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </td>
                 )}
               </tr>

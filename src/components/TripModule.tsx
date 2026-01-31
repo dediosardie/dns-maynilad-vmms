@@ -4,6 +4,7 @@ import { Trip, Vehicle, Driver } from '../types';
 import TripTable from './TripTable';
 import TripForm from './TripForm';
 import Modal from './Modal';
+import { Card, Button } from './ui';
 import { vehicleStorage, driverStorage } from '../storage';
 import { tripService } from '../services/supabaseService';
 import { notificationService } from '../services/notificationService';
@@ -212,11 +213,11 @@ export default function TripModule() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Planned Trips</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{plannedTrips}</p>
+              <p className="text-sm font-medium text-text-secondary">Planned Trips</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{plannedTrips}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -224,13 +225,13 @@ export default function TripModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">In Progress</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{inProgressTrips}</p>
+              <p className="text-sm font-medium text-text-secondary">In Progress</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{inProgressTrips}</p>
             </div>
             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -238,13 +239,13 @@ export default function TripModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Completed</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{completedTrips}</p>
+              <p className="text-sm font-medium text-text-secondary">Completed</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{completedTrips}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -252,13 +253,13 @@ export default function TripModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Distance</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalDistance.toFixed(0)} km</p>
+              <p className="text-sm font-medium text-text-secondary">Total Distance</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{totalDistance.toFixed(0)} km</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,34 +267,36 @@ export default function TripModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Main Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="p-6 border-b border-slate-200">
+      <Card>
+        <div className="p-6 border-b border-border-muted">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Trip Schedule</h2>
-              <p className="text-sm text-slate-600 mt-1">Manage routes and monitor trip status</p>
+              <h2 className="text-xl font-semibold text-text-primary">Trip Schedule</h2>
+              <p className="text-sm text-text-secondary mt-1">Manage routes and monitor trip status</p>
             </div>
-            <button
+            <Button
               onClick={handleAddTrip}
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
+              variant="primary"
+              size="md"
+              className="inline-flex items-center"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Schedule Trip
-            </button>
+            </Button>
           </div>
         </div>
 
         <div className="p-6">
           {isLoading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-              <p className="mt-2 text-slate-600">Loading trips...</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
+              <p className="mt-2 text-text-secondary">Loading trips...</p>
             </div>
           ) : (
             <TripTable
@@ -308,7 +311,7 @@ export default function TripModule() {
             />
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Modal for Create/Edit Trip */}
       <Modal

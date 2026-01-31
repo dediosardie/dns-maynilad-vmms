@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageRestriction } from '../types';
+import { Input, Textarea, Button } from './ui';
 
 interface PageRestrictionFormProps {
   initialData?: PageRestriction;
@@ -74,70 +75,50 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         {/* Page Name */}
         <div>
-          <label htmlFor="page_name" className="block text-sm font-medium text-slate-700">
-            Page Name <span className="text-red-500">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Page Name <span className="text-red-600">*</span></>}
             type="text"
             id="page_name"
             value={formData.page_name}
             onChange={(e) => handleChange('page_name', e.target.value)}
-            className={`mt-1 block w-full rounded-md shadow-sm ${
-              errors.page_name
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'
-            }`}
             placeholder="e.g., Dashboard"
+            error={errors.page_name}
           />
-          {errors.page_name && (
-            <p className="mt-1 text-sm text-red-600">{errors.page_name}</p>
-          )}
         </div>
 
         {/* Page Path */}
         <div>
-          <label htmlFor="page_path" className="block text-sm font-medium text-slate-700">
-            Page Path <span className="text-red-500">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Page Path <span className="text-red-600">*</span></>}
             type="text"
             id="page_path"
             value={formData.page_path}
             onChange={(e) => handleChange('page_path', e.target.value)}
-            className={`mt-1 block w-full rounded-md shadow-sm font-mono ${
-              errors.page_path
-                ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                : 'border-slate-300 focus:border-blue-500 focus:ring-blue-500'
-            }`}
+            className="font-mono"
             placeholder="/example-page"
+            error={errors.page_path}
           />
-          {errors.page_path && (
-            <p className="mt-1 text-sm text-red-600">{errors.page_path}</p>
-          )}
         </div>
       </div>
 
       {/* Description */}
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-slate-700">
-          Description
-        </label>
-        <textarea
+        <Textarea
+          label="Description"
           id="description"
           value={formData.description}
           onChange={(e) => handleChange('description', e.target.value)}
           rows={3}
-          className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
           placeholder="Brief description of this page and its purpose"
         />
       </div>
 
       {/* Role Access Controls */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-3">
+        <label className="block text-sm font-medium text-text-secondary mb-3">
           Role Access Permissions
         </label>
-        <div className="space-y-3 bg-slate-50 p-4 rounded-md">
+        <div className="space-y-3 bg-bg-elevated p-4 rounded-md">
           {/* Fleet Manager */}
           <div className="flex items-center">
             <input
@@ -145,11 +126,11 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
               id="fleet_manager_access"
               checked={formData.fleet_manager_access}
               onChange={(e) => handleChange('fleet_manager_access', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-border-muted text-accent focus:ring-accent"
             />
-            <label htmlFor="fleet_manager_access" className="ml-3 text-sm text-slate-700">
+            <label htmlFor="fleet_manager_access" className="ml-3 text-sm text-text-primary">
               <span className="font-medium">Fleet Manager</span>
-              <span className="text-slate-500 ml-2">- Oversee fleet operations</span>
+              <span className="text-text-muted ml-2">- Oversee fleet operations</span>
             </label>
           </div>
 
@@ -160,11 +141,11 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
               id="maintenance_team_access"
               checked={formData.maintenance_team_access}
               onChange={(e) => handleChange('maintenance_team_access', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-border-muted text-accent focus:ring-accent"
             />
-            <label htmlFor="maintenance_team_access" className="ml-3 text-sm text-slate-700">
+            <label htmlFor="maintenance_team_access" className="ml-3 text-sm text-text-primary">
               <span className="font-medium">Maintenance Team</span>
-              <span className="text-slate-500 ml-2">- Perform maintenance and repairs</span>
+              <span className="text-text-muted ml-2">- Perform maintenance and repairs</span>
             </label>
           </div>
 
@@ -175,11 +156,11 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
               id="driver_access"
               checked={formData.driver_access}
               onChange={(e) => handleChange('driver_access', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-border-muted text-accent focus:ring-accent"
             />
-            <label htmlFor="driver_access" className="ml-3 text-sm text-slate-700">
+            <label htmlFor="driver_access" className="ml-3 text-sm text-text-primary">
               <span className="font-medium">Driver</span>
-              <span className="text-slate-500 ml-2">- Operate vehicles and log activities</span>
+              <span className="text-text-muted ml-2">- Operate vehicles and log activities</span>
             </label>
           </div>
 
@@ -190,11 +171,11 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
               id="administration_access"
               checked={formData.administration_access}
               onChange={(e) => handleChange('administration_access', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-border-muted text-accent focus:ring-accent"
             />
-            <label htmlFor="administration_access" className="ml-3 text-sm text-slate-700">
+            <label htmlFor="administration_access" className="ml-3 text-sm text-text-primary">
               <span className="font-medium">Administration</span>
-              <span className="text-slate-500 ml-2">- Manage backend operations</span>
+              <span className="text-text-muted ml-2">- Manage backend operations</span>
             </label>
           </div>
 
@@ -205,11 +186,11 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
               id="client_company_liaison_access"
               checked={formData.client_company_liaison_access}
               onChange={(e) => handleChange('client_company_liaison_access', e.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-4 w-4 rounded border-border-muted text-accent focus:ring-accent"
             />
-            <label htmlFor="client_company_liaison_access" className="ml-3 text-sm text-slate-700">
+            <label htmlFor="client_company_liaison_access" className="ml-3 text-sm text-text-primary">
               <span className="font-medium">Client-Company Liaison</span>
-              <span className="text-slate-500 ml-2">- Coordinate with client companies</span>
+              <span className="text-text-muted ml-2">- Coordinate with client companies</span>
             </label>
           </div>
         </div>
@@ -222,29 +203,31 @@ export default function PageRestrictionForm({ initialData, onSubmit, onCancel }:
           id="is_active"
           checked={formData.is_active}
           onChange={(e) => handleChange('is_active', e.target.checked)}
-          className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+          className="h-4 w-4 rounded border-border-muted text-accent focus:ring-accent"
         />
-        <label htmlFor="is_active" className="ml-3 text-sm text-slate-700">
+        <label htmlFor="is_active" className="ml-3 text-sm text-text-primary">
           <span className="font-medium">Active</span>
-          <span className="text-slate-500 ml-2">- Enable this restriction</span>
+          <span className="text-text-muted ml-2">- Enable this restriction</span>
         </label>
       </div>
 
       {/* Action Buttons */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-        <button
+      <div className="flex justify-end gap-3 pt-4 border-t border-border-muted">
+        <Button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-md hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          variant="secondary"
+          size="md"
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          variant="primary"
+          size="md"
         >
           {initialData ? 'Update Restriction' : 'Create Restriction'}
-        </button>
+        </Button>
       </div>
     </form>
   );

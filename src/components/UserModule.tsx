@@ -3,6 +3,7 @@ import { User } from '../types';
 import UserTable from './UserTable';
 import UserForm from './UserForm';
 import Modal from './Modal';
+import { Card, Button } from './ui';
 import { userService } from '../services/supabaseService';
 import { notificationService } from '../services/notificationService';
 import { auditLogService } from '../services/auditLogService';
@@ -152,77 +153,79 @@ export default function UserModule() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Users</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{users.length}</p>
+              <p className="text-sm font-medium text-text-secondary">Total Users</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{users.length}</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Active</p>
+              <p className="text-sm font-medium text-text-secondary">Active</p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{users.filter(u => u.is_active).length}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-emerald-900/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Administrators</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{users.filter(u => u.role === 'administration').length}</p>
+              <p className="text-sm font-medium text-text-secondary">Administrators</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{users.filter(u => u.role === 'administration').length}</p>
             </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-purple-900/20 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Inactive</p>
-              <p className="text-2xl font-bold text-slate-600 mt-1">{users.filter(u => !u.is_active).length}</p>
+              <p className="text-sm font-medium text-text-secondary">Inactive</p>
+              <p className="text-2xl font-bold text-text-secondary mt-1">{users.filter(u => !u.is_active).length}</p>
             </div>
-            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+            <div className="w-12 h-12 bg-bg-elevated rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 715.636 5.636m12.728 12.728L5.636 5.636" />
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Main Content Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-slate-200">
+      <Card>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-border-muted">
           <div>
-            <h2 className="text-xl font-semibold text-slate-900">User Management</h2>
-            <p className="text-sm text-slate-600 mt-1">Manage system users and access control</p>
+            <h2 className="text-xl font-semibold text-text-primary">User Management</h2>
+            <p className="text-sm text-text-secondary mt-1">Manage system users and access control</p>
           </div>
           {canManageUsers && (
-            <button
+            <Button
               onClick={handleAddUser}
-              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm"
+              variant="primary"
+              size="md"
+              className="inline-flex items-center justify-center"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Add User
-            </button>
+            </Button>
           )}
         </div>
         
@@ -241,8 +244,8 @@ export default function UserModule() {
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-              <p className="text-slate-600 mt-4">Loading users...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+              <p className="text-text-secondary mt-4">Loading users...</p>
             </div>
           </div>
         ) : (
@@ -255,7 +258,7 @@ export default function UserModule() {
             />
           </div>
         )}
-      </div>
+      </Card>
 
       {canManageUsers && (
         <Modal

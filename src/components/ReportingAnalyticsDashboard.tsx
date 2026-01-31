@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { Vehicle, Driver, Maintenance, Trip, FuelTransaction, Incident } from '../types';
 import { vehicleStorage, driverStorage, maintenanceStorage } from '../storage';
 import { tripService, fuelService, incidentService } from '../services/supabaseService';
+import { Button, Card, Badge, Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from './ui';
 
 // Format number with thousand separators
 const formatNumber = (num: number, decimals: number = 2): string => {
@@ -140,224 +141,222 @@ export default function ReportingAnalyticsDashboard() {
       {isLoading ? (
         <div className="flex justify-center items-center py-20">
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-            <p className="text-slate-600 mt-4">Loading report data...</p>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+            <p className="text-text-secondary mt-4">Loading report data...</p>
           </div>
         </div>
       ) : (
         <>
           {/* Report Type Selector */}
-          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
-        <div className="flex items-center gap-2 overflow-x-auto">
-          {/* Report types per markdown Section 2 */}
-          {[
-            { id: 'dashboard', label: 'Dashboard Overview' },
-            { id: 'fleet', label: 'Fleet Performance' },
-            { id: 'maintenance', label: 'Maintenance Report' },
-            { id: 'driver', label: 'Driver Performance' },
-            { id: 'fuel', label: 'Fuel Efficiency' },
-            { id: 'incident', label: 'Incident Report' },
-            { id: 'financial', label: 'Financial Report' },
-            { id: 'trip', label: 'Trip Analysis' },
-          ].map(report => (
-            <button
-              key={report.id}
-              onClick={() => setSelectedReport(report.id)}
-              className={`px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap ${
-                selectedReport === report.id
-                  ? 'bg-red-600 text-white'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {report.label}
-            </button>
-          ))}
-        </div>
-      </div>
+          <Card>
+            <div className="flex items-center gap-2 overflow-x-auto">
+              {/* Report types per markdown Section 2 */}
+              {[
+                { id: 'dashboard', label: 'Dashboard Overview' },
+                { id: 'fleet', label: 'Fleet Performance' },
+                { id: 'maintenance', label: 'Maintenance Report' },
+                { id: 'driver', label: 'Driver Performance' },
+                { id: 'fuel', label: 'Fuel Efficiency' },
+                { id: 'incident', label: 'Incident Report' },
+                { id: 'financial', label: 'Financial Report' },
+                { id: 'trip', label: 'Trip Analysis' },
+              ].map(report => (
+                <Button
+                  key={report.id}
+                  onClick={() => setSelectedReport(report.id)}
+                  variant={selectedReport === report.id ? 'primary' : 'secondary'}
+                  size="sm"
+                  className="whitespace-nowrap"
+                >
+                  {report.label}
+                </Button>
+              ))}
+            </div>
+          </Card>
 
       {/* Real-Time Widgets per markdown Section 3.1 */}
       {selectedReport === 'dashboard' && (
         <>
           <div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Real-Time Fleet Status</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">Real-Time Fleet Status</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Widget 1: Active Vehicles */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Active Vehicles</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{activeVehicles}/{totalVehicles}</p>
+                    <p className="text-sm font-medium text-text-secondary">Active Vehicles</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{activeVehicles}/{totalVehicles}</p>
                   </div>
-                  <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 2: Scheduled Maintenance */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Scheduled Maintenance</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{scheduledMaintenance}</p>
+                    <p className="text-sm font-medium text-text-secondary">Scheduled Maintenance</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{scheduledMaintenance}</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 3: Available Drivers */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Available Drivers</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{availableDrivers}/{totalDrivers}</p>
+                    <p className="text-sm font-medium text-text-secondary">Available Drivers</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{availableDrivers}/{totalDrivers}</p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 4: Today's Fuel Cost */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Total Fuel Cost</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalFuelCost)}</p>
+                    <p className="text-sm font-medium text-text-secondary">Total Fuel Cost</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(totalFuelCost)}</p>
                   </div>
-                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
 
           {/* Performance Metrics Widgets per markdown Section 3.2 */}
           <div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Performance Metrics</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">Performance Metrics</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Widget 5: Fleet Utilization Rate */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Fleet Utilization Rate</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{utilizationRate}%</p>
+                    <p className="text-sm font-medium text-text-secondary">Fleet Utilization Rate</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{utilizationRate}%</p>
                   </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 6: Average Maintenance Cost */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Avg Maintenance Cost</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(parseFloat(averageMaintenanceCost))}</p>
+                    <p className="text-sm font-medium text-text-secondary">Avg Maintenance Cost</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(parseFloat(averageMaintenanceCost))}</p>
                   </div>
-                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 7: Fuel Efficiency */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Avg Cost Per Liter</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(parseFloat(averageCostPerLiter))}</p>
+                    <p className="text-sm font-medium text-text-secondary">Avg Cost Per Liter</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(parseFloat(averageCostPerLiter))}</p>
                   </div>
-                  <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
 
           {/* Comparative Metrics Widgets per markdown Section 3.3 */}
           <div>
-            <h2 className="text-xl font-semibold text-slate-900 mb-4">Operational Overview</h2>
+            <h2 className="text-xl font-semibold text-text-primary mb-4">Operational Overview</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* Widget 8: Total Mileage */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Total Mileage</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatNumber(totalMileage, 0)} km</p>
+                    <p className="text-sm font-medium text-text-secondary">Total Mileage</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{formatNumber(totalMileage, 0)} km</p>
                   </div>
-                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 9: Total Incidents */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Total Incidents</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{totalIncidents}</p>
-                    <p className="text-xs text-red-600 mt-1">{criticalIncidents + severeIncidents} critical/severe</p>
+                    <p className="text-sm font-medium text-text-secondary">Total Incidents</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{totalIncidents}</p>
+                    <p className="text-xs text-red-500 mt-1">{criticalIncidents + severeIncidents} critical/severe</p>
                   </div>
-                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-red-500/10 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 10: Completed Trips */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Completed Trips</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{completedTrips}</p>
+                    <p className="text-sm font-medium text-text-secondary">Completed Trips</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{completedTrips}</p>
                   </div>
-                  <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
 
               {/* Widget 11: Cost Per Km */}
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <Card>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">Cost Per Km</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(parseFloat(costPerKm))}</p>
+                    <p className="text-sm font-medium text-text-secondary">Cost Per Km</p>
+                    <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(parseFloat(costPerKm))}</p>
                   </div>
-                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+                    <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
                     </svg>
                   </div>
                 </div>
-              </div>
+              </Card>
             </div>
           </div>
         </>
@@ -365,201 +364,197 @@ export default function ReportingAnalyticsDashboard() {
 
       {/* Fleet Performance Report per markdown Section 2.1 */}
       {selectedReport === 'fleet' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">Fleet Performance Report</h2>
+            <h2 className="text-xl font-semibold text-text-primary">Fleet Performance Report</h2>
             {/* Export options per markdown Section 5 */}
-            <button className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            <Button variant="primary">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export PDF
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Total Vehicles</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalVehicles}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Total Vehicles</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{totalVehicles}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Active Vehicles</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">{activeVehicles}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Active Vehicles</p>
+              <p className="text-2xl font-bold text-emerald-500 mt-1">{activeVehicles}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Utilization Rate</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{utilizationRate}%</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Utilization Rate</p>
+              <p className="text-2xl font-bold text-accent mt-1">{utilizationRate}%</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Average Age</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{averageAge} yrs</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Average Age</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{averageAge} yrs</p>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Vehicle</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Mileage</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Age</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Type</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {vehicles.map(vehicle => (
-                  <tr key={vehicle.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                      {vehicle.plate_number}{vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - {vehicle.make} {vehicle.model}
-                    </td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        vehicle.status === 'active' ? 'bg-emerald-100 text-emerald-800' :
-                        vehicle.status === 'maintenance' ? 'bg-amber-100 text-amber-800' :
-                        'bg-slate-100 text-slate-800'
-                      }`}>
-                        {vehicle.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">N/A</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{new Date().getFullYear() - vehicle.year} yrs</td>
-                    <td className="px-4 py-3 text-sm text-slate-700 capitalize">{vehicle.ownership_type}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Vehicle</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Mileage</TableHead>
+                <TableHead>Age</TableHead>
+                <TableHead>Type</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {vehicles.map(vehicle => (
+                <TableRow key={vehicle.id}>
+                  <TableCell className="font-medium">
+                    {vehicle.plate_number}{vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - {vehicle.make} {vehicle.model}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={
+                      vehicle.status === 'active' ? 'success' :
+                      vehicle.status === 'maintenance' ? 'warning' :
+                      'default'
+                    }>
+                      {vehicle.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>N/A</TableCell>
+                  <TableCell>{new Date().getFullYear() - vehicle.year} yrs</TableCell>
+                  <TableCell className="capitalize">{vehicle.ownership_type}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       {/* Maintenance Report per markdown Section 2.2 */}
       {selectedReport === 'maintenance' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">Maintenance Report</h2>
-            <button className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            <h2 className="text-xl font-semibold text-text-primary">Maintenance Report</h2>
+            <Button variant="primary">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export Excel
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Total Cost</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{formatCurrency(totalMaintenanceCost)}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Total Cost</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{formatCurrency(totalMaintenanceCost)}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Scheduled</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{scheduledMaintenance}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Scheduled</p>
+              <p className="text-2xl font-bold text-accent mt-1">{scheduledMaintenance}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">In Progress</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{inProgressMaintenance}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">In Progress</p>
+              <p className="text-2xl font-bold text-amber-500 mt-1">{inProgressMaintenance}</p>
             </div>
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Completed</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">{completedMaintenance}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Completed</p>
+              <p className="text-2xl font-bold text-emerald-500 mt-1">{completedMaintenance}</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Average Cost Per Maintenance</p>
-              <p className="text-3xl font-bold text-blue-900 mt-1">{formatCurrency(parseFloat(averageMaintenanceCost))}</p>
+            <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Average Cost Per Maintenance</p>
+              <p className="text-3xl font-bold text-accent mt-1">{formatCurrency(parseFloat(averageMaintenanceCost))}</p>
             </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Cost Per Vehicle</p>
-              <p className="text-3xl font-bold text-purple-900 mt-1">{formatCurrency(parseFloat(costPerVehicle))}</p>
+            <div className="bg-accent-soft border border-accent/20 rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Cost Per Vehicle</p>
+              <p className="text-3xl font-bold text-accent mt-1">{formatCurrency(parseFloat(costPerVehicle))}</p>
             </div>
           </div>
 
           {/* Maintenance Records Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Vehicle</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Type</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Scheduled Date</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Cost</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Description</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {maintenanceRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
-                      No maintenance records found
-                    </td>
-                  </tr>
-                ) : (
-                  maintenanceRecords.map(record => {
-                    const vehicle = vehicles.find(v => v.id === record.vehicle_id);
-                    return (
-                      <tr key={record.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                          {vehicle ? `${vehicle.plate_number || vehicle.conduction_number} - ${vehicle.make} ${vehicle.model}` : 'N/A'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-700 capitalize">
-                          {record.maintenance_type.replace('_', ' ')}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-700">
-                          {new Date(record.scheduled_date).toLocaleDateString()}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            record.status === 'completed' ? 'bg-emerald-100 text-emerald-800' :
-                            record.status === 'pending' ? 'bg-blue-100 text-blue-800' :
-                            'bg-slate-100 text-slate-800'
-                          }`}>
-                            {record.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-700">
-                          {record.cost ? formatCurrency(record.cost) : '-'}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-slate-700 max-w-xs truncate">
-                          {record.description || '-'}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Vehicle</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Scheduled Date</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Cost</TableHead>
+                <TableHead>Description</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {maintenanceRecords.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-text-muted">
+                    No maintenance records found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                maintenanceRecords.map(record => {
+                  const vehicle = vehicles.find(v => v.id === record.vehicle_id);
+                  return (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-medium">
+                        {vehicle ? `${vehicle.plate_number || vehicle.conduction_number} - ${vehicle.make} ${vehicle.model}` : 'N/A'}
+                      </TableCell>
+                      <TableCell className="capitalize">
+                        {record.maintenance_type.replace('_', ' ')}
+                      </TableCell>
+                      <TableCell>
+                        {new Date(record.scheduled_date).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          record.status === 'completed' ? 'success' :
+                          record.status === 'pending' ? 'accent' :
+                          'default'
+                        }>
+                          {record.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {record.cost ? formatCurrency(record.cost) : '-'}
+                      </TableCell>
+                      <TableCell className="max-w-xs truncate">
+                        {record.description || '-'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       {/* Financial Report per markdown Section 2.7 */}
       {selectedReport === 'financial' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-slate-900">Financial Report</h2>
-            <button className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            <h2 className="text-xl font-semibold text-text-primary">Financial Report</h2>
+            <Button variant="primary">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               Export PDF
-            </button>
+            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <div className="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-xl p-6">
+            <div className="bg-gradient-to-br from-accent to-accent-hover text-white rounded-xl p-6">
               <p className="text-sm opacity-90">Total Operating Cost</p>
               <p className="text-3xl font-bold mt-2">{formatCurrency(totalOperatingCost)}</p>
               <p className="text-xs opacity-75 mt-1">Maintenance + Fuel</p>
             </div>
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl p-6">
+            <div className="bg-gradient-to-br from-accent to-accent-hover text-white rounded-xl p-6">
               <p className="text-sm opacity-90">Cost Per Kilometer</p>
               <p className="text-3xl font-bold mt-2">{formatCurrency(parseFloat(costPerKm))}</p>
               <p className="text-xs opacity-75 mt-1">Average across {formatNumber(totalDistance, 0)} km</p>
             </div>
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-xl p-6">
+            <div className="bg-gradient-to-br from-accent to-accent-hover text-white rounded-xl p-6">
               <p className="text-sm opacity-90">Cost Per Vehicle/Month</p>
               <p className="text-3xl font-bold mt-2">{formatCurrency(parseFloat(costPerVehiclePerMonth))}</p>
               <p className="text-xs opacity-75 mt-1">Estimated monthly average</p>
@@ -567,35 +562,35 @@ export default function ReportingAnalyticsDashboard() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Cost Breakdown</h3>
+            <div className="bg-bg-elevated rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Cost Breakdown</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Maintenance</span>
-                  <span className="text-lg font-bold text-slate-900">{formatCurrency(totalMaintenanceCost)}</span>
+                  <span className="text-sm text-text-secondary">Maintenance</span>
+                  <span className="text-lg font-bold text-text-primary">{formatCurrency(totalMaintenanceCost)}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-slate-600">Fuel</span>
-                  <span className="text-lg font-bold text-slate-900">{formatCurrency(totalFuelCost)}</span>
+                  <span className="text-sm text-text-secondary">Fuel</span>
+                  <span className="text-lg font-bold text-text-primary">{formatCurrency(totalFuelCost)}</span>
                 </div>
-                <div className="flex justify-between items-center pt-3 border-t border-slate-200">
-                  <span className="text-sm font-semibold text-slate-700">Total</span>
-                  <span className="text-xl font-bold text-red-600">{formatCurrency(totalOperatingCost)}</span>
+                <div className="flex justify-between items-center pt-3 border-t border-border-muted">
+                  <span className="text-sm font-semibold text-text-secondary">Total</span>
+                  <span className="text-xl font-bold text-accent">{formatCurrency(totalOperatingCost)}</span>
                 </div>
               </div>
             </div>
 
-            <div className="bg-slate-50 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Cost Distribution</h3>
+            <div className="bg-bg-elevated rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-text-primary mb-4">Cost Distribution</h3>
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-600">Maintenance</span>
-                    <span className="font-medium">{totalOperatingCost > 0 ? ((totalMaintenanceCost / totalOperatingCost) * 100).toFixed(1) : 0}%</span>
+                    <span className="text-text-secondary">Maintenance</span>
+                    <span className="font-medium text-text-primary">{totalOperatingCost > 0 ? ((totalMaintenanceCost / totalOperatingCost) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-bg-primary rounded-full h-2 overflow-hidden">
                     <div 
-                      className={`bg-blue-600 h-2 rounded-full transition-all duration-300 ${
+                      className={`bg-accent h-2 rounded-full transition-all duration-300 ${
                         totalOperatingCost === 0 ? 'w-0' :
                         (totalMaintenanceCost / totalOperatingCost) >= 0.95 ? 'w-full' :
                         (totalMaintenanceCost / totalOperatingCost) >= 0.75 ? 'w-11/12' :
@@ -610,12 +605,12 @@ export default function ReportingAnalyticsDashboard() {
                 </div>
                 <div>
                   <div className="flex justify-between text-sm mb-1">
-                    <span className="text-slate-600">Fuel</span>
-                    <span className="font-medium">{totalOperatingCost > 0 ? ((totalFuelCost / totalOperatingCost) * 100).toFixed(1) : 0}%</span>
+                    <span className="text-text-secondary">Fuel</span>
+                    <span className="font-medium text-text-primary">{totalOperatingCost > 0 ? ((totalFuelCost / totalOperatingCost) * 100).toFixed(1) : 0}%</span>
                   </div>
-                  <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                  <div className="w-full bg-bg-primary rounded-full h-2 overflow-hidden">
                     <div 
-                      className={`bg-amber-600 h-2 rounded-full transition-all duration-300 ${
+                      className={`bg-amber-500 h-2 rounded-full transition-all duration-300 ${
                         totalOperatingCost === 0 ? 'w-0' :
                         (totalFuelCost / totalOperatingCost) >= 0.95 ? 'w-full' :
                         (totalFuelCost / totalOperatingCost) >= 0.75 ? 'w-11/12' :
@@ -631,129 +626,124 @@ export default function ReportingAnalyticsDashboard() {
               </div>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Fuel Efficiency Report per markdown Section 2.4 */}
       {selectedReport === 'fuel' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Fuel Efficiency Report</h2>
+        <Card>
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Fuel Efficiency Report</h2>
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Total Fuel Cost</p>
-              <p className="text-3xl font-bold text-amber-900 mt-2">{formatCurrency(totalFuelCost)}</p>
+            <div className="bg-amber-500/10 border border-accent/20 rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Total Fuel Cost</p>
+              <p className="text-2xl font-bold text-accent mt-1">{formatCurrency(totalFuelCost)}</p>
             </div>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Total Liters</p>
-              <p className="text-3xl font-bold text-blue-900 mt-2">{formatNumber(totalLiters, 2)} L</p>
+            <div className="bg-accent-soft border border-accent/20 rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Total Liters</p>
+              <p className="text-2xl font-bold text-accent mt-1">{formatNumber(totalLiters, 2)} L</p>
             </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Avg Cost Per Liter</p>
-              <p className="text-3xl font-bold text-purple-900 mt-2">{formatCurrency(parseFloat(averageCostPerLiter))}</p>
+            <div className="bg-accent-soft border border-accent/20 rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Avg Cost Per Liter</p>
+              <p className="text-2xl font-bold text-accent mt-1">{formatCurrency(parseFloat(averageCostPerLiter))}</p>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Trip Analysis Report per markdown Section 2.8 */}
       {selectedReport === 'trip' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Trip Analysis Report</h2>
+        <Card>
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Trip Analysis Report</h2>
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Total Trips</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalTrips}</p>
+            <div className="bg-accent-soft rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Total Trips</p>
+              <p className="text-2xl font-bold text-accent mt-1">{totalTrips}</p>
             </div>
-            <div className="bg-emerald-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Completed</p>
-              <p className="text-2xl font-bold text-emerald-700 mt-1">{completedTrips}</p>
+            <div className="bg-accent-soft rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Completed</p>
+              <p className="text-2xl font-bold text-accent mt-1">{completedTrips}</p>
             </div>
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Total Distance</p>
-              <p className="text-2xl font-bold text-blue-700 mt-1">{formatNumber(totalDistance, 0)} km</p>
+            <div className="bg-accent-soft rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Total Distance</p>
+              <p className="text-2xl font-bold text-accent mt-1">{formatNumber(totalDistance, 0)} km</p>
             </div>
-            <div className="bg-purple-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Avg Distance</p>
-              <p className="text-2xl font-bold text-purple-700 mt-1">{formatNumber(parseFloat(averageTripDistance), 1)} km</p>
+            <div className="bg-accent-soft rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Avg Distance</p>
+              <p className="text-2xl font-bold text-accent mt-1">{formatNumber(parseFloat(averageTripDistance), 1)} km</p>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Incident Report per markdown Section 2.5 */}
       {selectedReport === 'incident' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Incident Report</h2>
+        <Card>
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Incident Report</h2>
           <div className="grid grid-cols-4 gap-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Total Incidents</p>
-              <p className="text-3xl font-bold text-red-900 mt-2">{totalIncidents}</p>
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Total Incidents</p>
+              <p className="text-3xl font-bold text-red-500 mt-2">{totalIncidents}</p>
             </div>
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Critical</p>
-              <p className="text-3xl font-bold text-orange-900 mt-2">{criticalIncidents}</p>
+            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Critical</p>
+              <p className="text-3xl font-bold text-orange-500 mt-2">{criticalIncidents}</p>
             </div>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Severe</p>
-              <p className="text-3xl font-bold text-amber-900 mt-2">{severeIncidents}</p>
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Severe</p>
+              <p className="text-3xl font-bold text-amber-500 mt-2">{severeIncidents}</p>
             </div>
-            <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 text-center">
-              <p className="text-sm text-slate-600">Incident Rate</p>
-              <p className="text-3xl font-bold text-slate-900 mt-2">{incidentRate}%</p>
+            <div className="bg-bg-elevated border border-border-muted rounded-lg p-6 text-center">
+              <p className="text-sm text-text-secondary">Incident Rate</p>
+              <p className="text-3xl font-bold text-text-primary mt-2">{incidentRate}%</p>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Driver Performance Report per markdown Section 2.3 */}
       {selectedReport === 'driver' && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-          <h2 className="text-xl font-semibold text-slate-900 mb-6">Driver Performance Report</h2>
+        <Card>
+          <h2 className="text-xl font-semibold text-text-primary mb-6">Driver Performance Report</h2>
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-slate-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Total Drivers</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalDrivers}</p>
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Total Drivers</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{totalDrivers}</p>
             </div>
-            <div className="bg-emerald-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Active</p>
-              <p className="text-2xl font-bold text-emerald-700 mt-1">{activeDrivers}</p>
+            <div className="bg-emerald-500/10 rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Active</p>
+              <p className="text-2xl font-bold text-emerald-500 mt-1">{activeDrivers}</p>
             </div>
-            <div className="bg-blue-50 rounded-lg p-4">
-              <p className="text-sm text-slate-600">Available</p>
-              <p className="text-2xl font-bold text-blue-700 mt-1">{availableDrivers}</p>
+            <div className="bg-accent-soft rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Available</p>
+              <p className="text-2xl font-bold text-accent mt-1">{availableDrivers}</p>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Driver</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">License Number</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Expiry Date</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-slate-200">
-                {drivers.map(driver => (
-                  <tr key={driver.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 text-sm font-medium text-slate-900">{driver.full_name}</td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{driver.license_number}</td>
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`px-2 py-1 rounded text-xs font-medium ${
-                        driver.status === 'active' ? 'bg-emerald-100 text-emerald-800' :
-                        'bg-slate-100 text-slate-800'
-                      }`}>
-                        {driver.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-slate-700">{new Date(driver.license_expiry).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Driver</TableHead>
+                <TableHead>License Number</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Expiry Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {drivers.map(driver => (
+                <TableRow key={driver.id}>
+                  <TableCell className="font-medium">{driver.full_name}</TableCell>
+                  <TableCell>{driver.license_number}</TableCell>
+                  <TableCell>
+                    <Badge variant={driver.status === 'active' ? 'success' : 'default'}>
+                      {driver.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(driver.license_expiry).toLocaleDateString()}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
       )}
         </>
       )}

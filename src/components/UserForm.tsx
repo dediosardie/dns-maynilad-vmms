@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { User } from '../types';
+import { Input, Select, Button } from './ui';
 
 interface UserFormProps {
   onSave: (user: Omit<User, 'id' | 'created_at' | 'updated_at'>) => void;
@@ -69,45 +70,37 @@ export default function UserForm({ onSave, onUpdate, initialData }: UserFormProp
       <div className="grid grid-cols-1 gap-6">
         {/* Full Name */}
         <div>
-          <label htmlFor="full_name" className="block text-sm font-medium text-slate-700 mb-1.5">
-            Full Name <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Full Name <span className="text-red-600">*</span></>}
             type="text"
             id="full_name"
             name="full_name"
             value={formData.full_name}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
             placeholder="Enter full name"
           />
         </div>
 
         {/* Email */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">
-            Email Address <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Email Address <span className="text-red-600">*</span></>}
             type="email"
             id="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
             placeholder="user@example.com"
+            helperText="Will be used for authentication"
           />
-          <p className="mt-1 text-xs text-slate-500">Will be used for authentication</p>
         </div>
 
         {/* Password */}
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1.5">
-            Password {!initialData && <span className="text-red-600">*</span>}
-          </label>
-          <input
+          <Input
+            label={<>Password {!initialData && <span className="text-red-600">*</span>}</>}
             type="password"
             id="password"
             name="password"
@@ -115,26 +108,22 @@ export default function UserForm({ onSave, onUpdate, initialData }: UserFormProp
             onChange={handleChange}
             required={!initialData}
             minLength={6}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
             placeholder={initialData ? "Leave blank to keep current password" : "Minimum 6 characters"}
+            helperText={
+              initialData ? "Leave blank to keep the current password unchanged" : "User will use this password to log in"
+            }
           />
-          <p className="mt-1 text-xs text-slate-500">
-            {initialData ? "Leave blank to keep the current password unchanged" : "User will use this password to log in"}
-          </p>
         </div>
 
         {/* Role */}
         <div>
-          <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1.5">
-            Role <span className="text-red-600">*</span>
-          </label>
-          <select
+          <Select
+            label={<>Role <span className="text-red-600">*</span></>}
             id="role"
             name="role"
             value={formData.role}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Select a role</option>
             <option value="driver">Driver</option>
@@ -142,8 +131,8 @@ export default function UserForm({ onSave, onUpdate, initialData }: UserFormProp
             <option value="fleet_manager">Fleet Manager</option>
             <option value="administration">Administration</option>
             <option value="client_company_liaison">Client Company Liaison</option>
-          </select>
-          <p className="mt-1 text-xs text-slate-500">
+          </Select>
+          <p className="mt-1 text-xs text-text-muted">
             Determines access level and permissions
           </p>
         </div>
@@ -157,14 +146,14 @@ export default function UserForm({ onSave, onUpdate, initialData }: UserFormProp
               name="is_active"
               checked={formData.is_active}
               onChange={handleChange}
-              className="w-4 h-4 text-red-600 border-slate-300 rounded focus:ring-red-500"
+              className="w-4 h-4 text-accent border-border-muted rounded focus:ring-accent"
             />
           </div>
           <div className="ml-3">
-            <label htmlFor="is_active" className="font-medium text-sm text-slate-700">
+            <label htmlFor="is_active" className="font-medium text-sm text-text-primary">
               Active User
             </label>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-text-muted">
               Inactive users cannot access the system
             </p>
           </div>
@@ -172,9 +161,9 @@ export default function UserForm({ onSave, onUpdate, initialData }: UserFormProp
       </div>
 
       {/* Role Permissions Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="text-sm font-semibold text-blue-900 mb-2">Role Permissions</h4>
-        <ul className="text-xs text-blue-800 space-y-1">
+      <div className="bg-bg-elevated border border-border-muted rounded-lg p-4">
+        <h4 className="text-sm font-semibold text-text-primary mb-2">Role Permissions</h4>
+        <ul className="text-xs text-text-secondary space-y-1">
           <li><strong>Admin:</strong> Full system access, can manage users</li>
           <li><strong>Fleet Manager:</strong> Manage vehicles, trips, fuel tracking</li>
           <li><strong>Maintenance Manager:</strong> Manage maintenance, incidents, insurance</li>
@@ -184,13 +173,10 @@ export default function UserForm({ onSave, onUpdate, initialData }: UserFormProp
       </div>
 
       {/* Form Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
-        <button
-          type="submit"
-          className="px-6 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm"
-        >
+      <div className="flex justify-end gap-3 pt-4 border-t border-border-muted">
+        <Button type="submit" variant="primary" size="md">
           {initialData ? 'Update User' : 'Create User'}
-        </button>
+        </Button>
       </div>
     </form>
   );

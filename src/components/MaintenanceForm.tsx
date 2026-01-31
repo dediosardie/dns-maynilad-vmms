@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Maintenance } from '../types';
+import { Input, Select, Textarea, Button } from './ui';
 
 interface MaintenanceFormProps {
   onSchedule: (maintenance: Omit<Maintenance, 'id'>) => void;
@@ -40,7 +41,7 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     }
   }, [initialData]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -61,15 +62,12 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Vehicle <span className="text-red-600">*</span>
-          </label>
-          <select
+          <Select
+            label={<>Vehicle <span className="text-red-600">*</span></>}
             name="vehicle_id"
             value={formData.vehicle_id}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Select a vehicle</option>
             {vehicles.map((vehicle) => (
@@ -77,73 +75,62 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
                 {vehicle.plate_number}{(vehicle as any).conduction_number ? ` (${(vehicle as any).conduction_number})` : ''}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Maintenance Type
-          </label>
-          <select
+          <Select
+            label="Maintenance Type"
             name="maintenance_type"
             value={formData.maintenance_type}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="preventive">preventive</option>
             <option value="repair">repair</option>
-          </select>
+          </Select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Scheduled Date
-          </label>
-          <input
+          <Input
+            label="Scheduled Date"
             type="date"
             name="scheduled_date"
             value={formData.scheduled_date}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Cost
-          </label>
-          <input
+          <Input
+            label="Cost"
             type="number"
             name="cost"
             value={formData.cost || ''}
             onChange={handleChange}
             step="0.01"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-          Description
-        </label>
-        <textarea
+        <Textarea
+          label="Description"
           name="description"
           value={formData.description || ''}
-          onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+          onChange={handleChange}
           rows={4}
           placeholder="Enter maintenance details, notes, or observations..."
-          className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
         />
       </div>
 
-      <div className="mt-6 pt-6 border-t border-slate-200 flex justify-end">
-        <button
+      <div className="mt-6 pt-6 border-t border-border-muted flex justify-end">
+        <Button
           type="submit"
-          className="px-4 py-2 bg-gradient-to-r from-red-600 to-red-700 text-white text-sm font-medium rounded-md hover:from-red-700 hover:to-red-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+          variant="primary"
+          size="md"
         >
           Schedule Maintenance
-        </button>
+        </Button>
       </div>
     </form>
   );

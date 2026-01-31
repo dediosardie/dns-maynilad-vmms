@@ -1,5 +1,6 @@
 // Fuel Transaction Table - Defined per fuel-tracking-module.md
 import { FuelTransaction, Vehicle, Driver } from '../types';
+import { Button, Badge } from './ui';
 // Format number with thousand separators
 const formatNumber = (num: number, decimals: number = 2): string => {
   return num.toLocaleString('en-US', {
@@ -62,94 +63,98 @@ export default function FuelTransactionTable({
   return (
     <div className="overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200">
-          <thead className="bg-slate-50">
+        <table className="min-w-full divide-y divide-border-muted">
+          <thead className="bg-bg-elevated">
             <tr>
               {/* Columns per Fuel Transaction Table definition */}
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Vehicle
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Driver
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Odometer
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Liters
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Cost
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Cost/L
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Fuel Type
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Station
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-slate-600 uppercase tracking-wider">
+              <th className="px-6 py-3 text-right text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-slate-200">
+          <tbody className="bg-bg-secondary divide-y divide-border-muted">
             {transactions.map((transaction) => (
-              <tr key={transaction.id} className="hover:bg-slate-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+              <tr key={transaction.id} className="hover:bg-bg-elevated transition-colors">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                   {getVehicleInfo(transaction.vehicle_id)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {getDriverInfo(transaction.driver_id)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {new Date(transaction.transaction_date).toLocaleDateString()}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {formatNumber(transaction.odometer_reading, 0)} km
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {formatNumber(transaction.liters, 2)} L
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {formatCurrency(transaction.cost)}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {formatCurrency(transaction.cost_per_liter)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    transaction.fuel_type === 'diesel' ? 'bg-amber-100 text-amber-800' :
-                    transaction.fuel_type === 'petrol' ? 'bg-blue-100 text-blue-800' :
-                    transaction.fuel_type === 'electric' ? 'bg-emerald-100 text-emerald-800' :
-                    'bg-purple-100 text-purple-800'
-                  }`}>
+                  <Badge variant={
+                    transaction.fuel_type === 'diesel' ? 'warning' :
+                    transaction.fuel_type === 'petrol' ? 'accent' :
+                    transaction.fuel_type === 'electric' ? 'success' :
+                    'default'
+                  }>
                     {transaction.fuel_type}
-                  </span>
+                  </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {transaction.station_name || '-'}
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                  {/* Action: Update Transaction (primary) */}
-                  <button
-                    onClick={() => onEdit(transaction)}
-                    className="text-red-600 hover:text-red-900 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  {/* Action: Delete Transaction (danger, confirmation required) */}
-                  <button
-                    onClick={() => handleDelete(transaction)}
-                    className="text-slate-600 hover:text-slate-900 transition-colors"
-                  >
-                    Delete
-                  </button>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <div className="flex items-center justify-end gap-2">
+                    {/* Action: Edit Transaction */}
+                    <Button
+                      onClick={() => onEdit(transaction)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Edit
+                    </Button>
+                    {/* Action: Delete Transaction (danger) */}
+                    <Button
+                      onClick={() => handleDelete(transaction)}
+                      variant="danger"
+                      size="sm"
+                    >
+                      Delete
+                    </Button>
+                  </div>
                 </td>
               </tr>
             ))}

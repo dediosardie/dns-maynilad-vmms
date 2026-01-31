@@ -1,6 +1,7 @@
 // Fuel Transaction Form Component - Defined per fuel-tracking-module.md
 import React, { useState, useEffect } from 'react';
 import { FuelTransaction, Vehicle, Driver } from '../types';
+import { Input, Select } from './ui';
 
 interface FuelTransactionFormProps {
   onSave: (transaction: Omit<FuelTransaction, 'id' | 'created_at'>) => void;
@@ -90,83 +91,69 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
       <div className="grid grid-cols-2 gap-6">
         {/* Vehicle (select, required, from active vehicles) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Vehicle <span className="text-red-600">*</span>
-          </label>
-          <select
+          <Select
+            label={<>Vehicle <span className="text-red-600">*</span></>}
             name="vehicle_id"
             value={formData.vehicle_id}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
-            <option value="">Select Vehicle</option>
-            {activeVehicles.map(vehicle => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.plate_number}{vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - {vehicle.make} {vehicle.model}
+            <option value="">Select vehicle</option>
+            {activeVehicles.map((v) => (
+              <option key={v.id} value={v.id}>
+                {v.plate_number}{v.conduction_number ? ` (${v.conduction_number})` : ''}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Driver (select, required, from active drivers) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Driver <span className="text-red-600">*</span>
-          </label>
-          <select
+          <Select
+            label={<>Driver <span className="text-red-600">*</span></>}
             name="driver_id"
             value={formData.driver_id}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
-            <option value="">Select Driver</option>
-            {activeDrivers.map(driver => (
-              <option key={driver.id} value={driver.id}>
-                {driver.full_name}
+            <option value="">Select driver</option>
+            {activeDrivers.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.full_name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Transaction Date (datetime, required, default: now) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Transaction Date <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Transaction Date <span className="text-red-600">*</span></>}
             type="datetime-local"
             name="transaction_date"
             value={formData.transaction_date}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         {/* Odometer Reading (number, required, km) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Odometer Reading (km) <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Odometer Reading (km) <span className="text-red-600">*</span></>}
             type="number"
             name="odometer_reading"
             value={formData.odometer_reading}
             onChange={handleChange}
             required
             min="0"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         {/* Liters (number, required, decimal) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Liters <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Liters <span className="text-red-600">*</span></>}
             type="number"
             name="liters"
             value={formData.liters}
@@ -174,16 +161,13 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
             required
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         {/* Cost (number, required, decimal) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Cost <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Cost <span className="text-red-600">*</span></>}
             type="number"
             name="cost"
             value={formData.cost}
@@ -191,7 +175,6 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
             required
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
@@ -232,29 +215,23 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
 
         {/* Station Name (text, optional) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Station Name
-          </label>
-          <input
+          <Input
+            label="Station Name"
             type="text"
             name="station_name"
             value={formData.station_name || ''}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         {/* Station Location (text, optional) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Station Location
-          </label>
-          <input
+          <Input
+            label="Station Location"
             type="text"
             name="station_location"
             value={formData.station_location || ''}
             onChange={handleChange}
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
       </div>

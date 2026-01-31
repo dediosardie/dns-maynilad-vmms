@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { DisposalRequest, DisposalAuction, Bid, Vehicle } from '../types';
 import Modal from './Modal';
+import { Input, Select, Textarea, Button, Badge, Card } from './ui';
 import { disposalService, vehicleService } from '../services/supabaseService';
 import { notificationService } from '../services/notificationService';
 import { auditLogService } from '../services/auditLogService';
@@ -105,96 +106,126 @@ export default function VehicleDisposalModule() {
         <div className="grid grid-cols-2 gap-4">
           {/* Disposal Number (text, auto-generated) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Disposal Number
-            </label>
-            <input type="text" value={formData.disposal_number} onChange={(e) => setFormData({...formData, disposal_number: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md bg-slate-50 focus:ring-2 focus:ring-red-500" />
+            <Input
+              label="Disposal Number"
+              name="disposal_number"
+              value={formData.disposal_number}
+              onChange={(e) => setFormData({...formData, disposal_number: e.target.value})}
+              required
+            />
           </div>
 
           {/* Vehicle (select, required) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Vehicle <span className="text-red-600">*</span>
-            </label>
-            <select value={formData.vehicle_id} onChange={(e) => setFormData({...formData, vehicle_id: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
+            <Select
+              label={<>Vehicle <span className="text-red-600">*</span></>}
+              name="vehicle_id"
+              value={formData.vehicle_id}
+              onChange={(e) => setFormData({...formData, vehicle_id: e.target.value})}
+              required
+            >
               <option value="">Select Vehicle</option>
               {vehicles.map(v => (
                 <option key={v.id} value={v.id}>{v.plate_number}{v.conduction_number ? ` (${v.conduction_number})` : ''} - {v.make} {v.model} ({v.year})</option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Reason for Disposal (select, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Reason for Disposal <span className="text-red-600">*</span>
-            </label>
-            <select value={formData.disposal_reason} onChange={(e) => setFormData({...formData, disposal_reason: e.target.value as any})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
+            <Select
+              label={<>Reason for Disposal <span className="text-red-600">*</span></>}
+              name="disposal_reason"
+              value={formData.disposal_reason}
+              onChange={(e) => setFormData({...formData, disposal_reason: e.target.value as any})}
+              required
+            >
               <option value="end_of_life">End of Life</option>
               <option value="excessive_maintenance">Excessive Maintenance</option>
               <option value="accident_damage">Accident Damage</option>
               <option value="upgrade">Upgrade</option>
               <option value="policy_change">Policy Change</option>
-            </select>
+            </Select>
           </div>
 
           {/* Condition Rating (select, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Condition Rating <span className="text-red-600">*</span>
-            </label>
-            <select value={formData.condition_rating} onChange={(e) => setFormData({...formData, condition_rating: e.target.value as any})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
+            <Select
+              label={<>Condition Rating <span className="text-red-600">*</span></>}
+              name="condition_rating"
+              value={formData.condition_rating}
+              onChange={(e) => setFormData({...formData, condition_rating: e.target.value as any})}
+              required
+            >
               <option value="excellent">Excellent</option>
               <option value="good">Good</option>
               <option value="fair">Fair</option>
               <option value="poor">Poor</option>
               <option value="salvage">Salvage</option>
-            </select>
+            </Select>
           </div>
 
           {/* Current Mileage (number, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Current Mileage <span className="text-red-600">*</span>
-            </label>
-            <input type="number" value={formData.current_mileage} onChange={(e) => setFormData({...formData, current_mileage: parseInt(e.target.value)})} required min="0" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Current Mileage <span className="text-red-600">*</span></>}
+              name="current_mileage"
+              type="number"
+              value={formData.current_mileage}
+              onChange={(e) => setFormData({...formData, current_mileage: parseInt(e.target.value)})}
+              required
+              min="0"
+            />
           </div>
 
           {/* Estimated Value (number, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Estimated Value <span className="text-red-600">*</span>
-            </label>
-            <input type="number" value={formData.estimated_value} onChange={(e) => setFormData({...formData, estimated_value: parseFloat(e.target.value)})} required step="0.01" min="0" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Estimated Value <span className="text-red-600">*</span></>}
+              name="estimated_value"
+              type="number"
+              value={formData.estimated_value}
+              onChange={(e) => setFormData({...formData, estimated_value: parseFloat(e.target.value)})}
+              required
+              step="0.01"
+              min="0"
+            />
           </div>
 
           {/* Recommended Method (select, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Recommended Method <span className="text-red-600">*</span>
-            </label>
-            <select value={formData.recommended_method} onChange={(e) => setFormData({...formData, recommended_method: e.target.value as any})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
+            <Select
+              label={<>Recommended Method <span className="text-red-600">*</span></>}
+              name="recommended_method"
+              value={formData.recommended_method}
+              onChange={(e) => setFormData({...formData, recommended_method: e.target.value as any})}
+              required
+            >
               <option value="auction">Auction</option>
               <option value="best_offer">Best Offer</option>
               <option value="trade_in">Trade-in</option>
               <option value="scrap">Scrap</option>
               <option value="donation">Donation</option>
-            </select>
+            </Select>
           </div>
 
           {/* Request Date (date, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Request Date <span className="text-red-600">*</span>
-            </label>
-            <input type="date" value={formData.request_date} onChange={(e) => setFormData({...formData, request_date: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Request Date <span className="text-red-600">*</span></>}
+              name="request_date"
+              type="date"
+              value={formData.request_date}
+              onChange={(e) => setFormData({...formData, request_date: e.target.value})}
+              required
+            />
           </div>
         </div>
 
         {/* Actions: Submit Request (primary, submit) */}
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Submit Request</button>
+          <Button type="button" onClick={onClose} variant="secondary">Cancel</Button>
+          <Button type="submit" variant="primary">Submit Request</Button>
         </div>
       </form>
     );
@@ -234,51 +265,75 @@ export default function VehicleDisposalModule() {
         <div className="grid grid-cols-2 gap-4">
           {/* Auction Type (select, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Auction Type <span className="text-red-600">*</span>
-            </label>
-            <select value={formData.auction_type} onChange={(e) => setFormData({...formData, auction_type: e.target.value as any})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500">
+            <Select
+              label={<>Auction Type <span className="text-red-600">*</span></>}
+              name="auction_type"
+              value={formData.auction_type}
+              onChange={(e) => setFormData({...formData, auction_type: e.target.value as any})}
+              required
+            >
               <option value="public">Public</option>
               <option value="sealed_bid">Sealed Bid</option>
               <option value="online">Online</option>
-            </select>
+            </Select>
           </div>
 
           {/* Starting Price (number, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Starting Price <span className="text-red-600">*</span>
-            </label>
-            <input type="number" value={formData.starting_price} onChange={(e) => setFormData({...formData, starting_price: parseFloat(e.target.value)})} required step="0.01" min="0" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Starting Price <span className="text-red-600">*</span></>}
+              name="starting_price"
+              type="number"
+              value={formData.starting_price}
+              onChange={(e) => setFormData({...formData, starting_price: parseFloat(e.target.value)})}
+              required
+              step="0.01"
+              min="0"
+            />
           </div>
 
           {/* Reserve Price (number, optional) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Reserve Price</label>
-            <input type="number" value={formData.reserve_price} onChange={(e) => setFormData({...formData, reserve_price: parseFloat(e.target.value)})} step="0.01" min={formData.starting_price} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label="Reserve Price"
+              name="reserve_price"
+              type="number"
+              value={formData.reserve_price}
+              onChange={(e) => setFormData({...formData, reserve_price: parseFloat(e.target.value)})}
+              step="0.01"
+              min={formData.starting_price}
+            />
           </div>
 
           {/* Start Date (date, required) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Start Date <span className="text-red-600">*</span>
-            </label>
-            <input type="date" value={formData.start_date} onChange={(e) => setFormData({...formData, start_date: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Start Date <span className="text-red-600">*</span></>}
+              name="start_date"
+              type="date"
+              value={formData.start_date}
+              onChange={(e) => setFormData({...formData, start_date: e.target.value})}
+              required
+            />
           </div>
 
           {/* End Date (date, required, min 7 days) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              End Date <span className="text-red-600">*</span> (min 7 days)
-            </label>
-            <input type="date" value={formData.end_date} onChange={(e) => setFormData({...formData, end_date: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>End Date <span className="text-red-600">*</span> (min 7 days)</>}
+              name="end_date"
+              type="date"
+              value={formData.end_date}
+              onChange={(e) => setFormData({...formData, end_date: e.target.value})}
+              required
+            />
           </div>
         </div>
 
         {/* Actions: Create Auction (primary, submit) */}
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Create Auction</button>
+          <Button type="button" onClick={onClose} variant="secondary">Cancel</Button>
+          <Button type="submit" variant="primary">Create Auction</Button>
         </div>
       </form>
     );
@@ -312,8 +367,8 @@ export default function VehicleDisposalModule() {
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
-          <p className="text-sm text-blue-900">
+        <div className="bg-accent-soft border border-border-muted rounded p-3 mb-4">
+          <p className="text-sm text-text-primary">
             <strong>Current Highest Bid:</strong> ${currentHighestBid.toFixed(2)}<br />
             <strong>Minimum Next Bid:</strong> ${minimumBid.toFixed(2)}
           </p>
@@ -322,41 +377,58 @@ export default function VehicleDisposalModule() {
         <div className="grid grid-cols-2 gap-4">
           {/* Bidder Name (text, required) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Bidder Name <span className="text-red-600">*</span>
-            </label>
-            <input type="text" value={formData.bidder_name} onChange={(e) => setFormData({...formData, bidder_name: e.target.value})} required className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Bidder Name <span className="text-red-600">*</span></>}
+              name="bidder_name"
+              value={formData.bidder_name}
+              onChange={(e) => setFormData({...formData, bidder_name: e.target.value})}
+              required
+            />
           </div>
 
           {/* Bidder Contact (text, required) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Bidder Contact (Email/Phone) <span className="text-red-600">*</span>
-            </label>
-            <input type="text" value={formData.bidder_contact} onChange={(e) => setFormData({...formData, bidder_contact: e.target.value})} required placeholder="email@example.com or +63 XXX XXX XXXX" className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Bidder Contact (Email/Phone) <span className="text-red-600">*</span></>}
+              name="bidder_contact"
+              value={formData.bidder_contact}
+              onChange={(e) => setFormData({...formData, bidder_contact: e.target.value})}
+              required
+              placeholder="email@example.com or +63 XXX XXX XXXX"
+            />
           </div>
 
           {/* Bid Amount (number, required, >= minimum bid) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Bid Amount <span className="text-red-600">*</span>
-            </label>
-            <input type="number" value={formData.bid_amount} onChange={(e) => setFormData({...formData, bid_amount: parseFloat(e.target.value)})} required step="0.01" min={minimumBid} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" />
+            <Input
+              label={<>Bid Amount <span className="text-red-600">*</span></>}
+              name="bid_amount"
+              type="number"
+              value={formData.bid_amount}
+              onChange={(e) => setFormData({...formData, bid_amount: parseFloat(e.target.value)})}
+              required
+              step="0.01"
+              min={minimumBid}
+            />
           </div>
 
           {/* Notes (textarea, optional) */}
           <div className="col-span-2">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Notes (Optional)
-            </label>
-            <textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} rows={3} className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-red-500" placeholder="Any additional information..." />
+            <Textarea
+              label="Notes (Optional)"
+              name="notes"
+              value={formData.notes}
+              onChange={(e) => setFormData({...formData, notes: e.target.value})}
+              rows={3}
+              placeholder="Any additional information..."
+            />
           </div>
         </div>
 
         {/* Actions: Submit Bid (primary, submit) */}
         <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="px-4 py-2 border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50">Cancel</button>
-          <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Submit Bid</button>
+          <Button type="button" onClick={onClose} variant="secondary">Cancel</Button>
+          <Button type="submit" variant="primary">Submit Bid</Button>
         </div>
       </form>
     );
@@ -509,17 +581,17 @@ export default function VehicleDisposalModule() {
     <div className="space-y-6">
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
         </div>
       ) : (
         <>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Pending Requests</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{pendingRequests}</p>
+              <p className="text-sm font-medium text-text-secondary">Pending Requests</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{pendingRequests}</p>
             </div>
             <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -527,13 +599,13 @@ export default function VehicleDisposalModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Active Auctions</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{activeAuctions}</p>
+              <p className="text-sm font-medium text-text-secondary">Active Auctions</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{activeAuctions}</p>
             </div>
             <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -541,13 +613,13 @@ export default function VehicleDisposalModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Disposals</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{totalDisposals}</p>
+              <p className="text-sm font-medium text-text-secondary">Total Disposals</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{totalDisposals}</p>
             </div>
             <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -555,13 +627,13 @@ export default function VehicleDisposalModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+        <Card>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Revenue</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">${totalRevenue.toLocaleString()}</p>
+              <p className="text-sm font-medium text-text-secondary">Total Revenue</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">${totalRevenue.toLocaleString()}</p>
             </div>
             <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
               <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -569,87 +641,87 @@ export default function VehicleDisposalModule() {
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Main Content */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="p-6 border-b border-slate-200">
+      <Card>
+        <div className="p-6 border-b border-border-muted">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h2 className="text-xl font-semibold text-slate-900">Vehicle Disposal Management</h2>
-              <p className="text-sm text-slate-600 mt-1">Manage disposal requests and auctions</p>
+              <h2 className="text-xl font-semibold text-text-primary">Vehicle Disposal Management</h2>
+              <p className="text-sm text-text-secondary mt-1">Manage disposal requests and auctions</p>
             </div>
             {/* Action: Submit Disposal Request (primary) */}
-            <button onClick={() => setIsRequestModalOpen(true)} className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">
+            <Button onClick={() => setIsRequestModalOpen(true)} variant="primary">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               New Disposal Request
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Disposal Requests Table */}
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Disposal Requests</h3>
+          <h3 className="text-lg font-semibold text-text-primary mb-4">Disposal Requests</h3>
           {disposalRequests.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-slate-600">No disposal requests yet</p>
+              <p className="text-text-secondary">No disposal requests yet</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-border-muted">
+                <thead className="bg-bg-elevated">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Vehicle</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Reason</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Est. Value</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Method</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Approval</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Vehicle</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Reason</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Est. Value</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Method</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Approval</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-bg-secondary divide-y divide-border-muted">
                   {disposalRequests.map((request) => {
                     const vehicle = vehicles.find(v => v.id === request.vehicle_id);
                     const auction = auctions.find(a => a.disposal_id === request.id);
                     return (
-                      <tr key={request.id} className="hover:bg-slate-50">
-                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                      <tr key={request.id} className="hover:bg-bg-elevated">
+                        <td className="px-4 py-3 text-sm font-medium text-text-primary">
                           {vehicle ? `${vehicle.plate_number}${vehicle.conduction_number ? ` (${vehicle.conduction_number})` : ''} - ${vehicle.make} ${vehicle.model}` : 'Unknown'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-700 capitalize">{request.disposal_reason.replace('_', ' ')}</td>
-                        <td className="px-4 py-3 text-sm text-slate-700">${request.estimated_value.toLocaleString()}</td>
-                        <td className="px-4 py-3 text-sm text-slate-700 capitalize">{request.recommended_method.replace('_', ' ')}</td>
+                        <td className="px-4 py-3 text-sm text-text-secondary capitalize">{request.disposal_reason.replace('_', ' ')}</td>
+                        <td className="px-4 py-3 text-sm text-text-secondary">${request.estimated_value.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-sm text-text-secondary capitalize">{request.recommended_method.replace('_', ' ')}</td>
                         <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            request.status === 'pending_approval' ? 'bg-amber-100 text-amber-800' :
-                            request.status === 'listed' ? 'bg-emerald-100 text-emerald-800' :
-                            request.status === 'bidding_open' ? 'bg-blue-100 text-blue-800' :
-                            request.status === 'sold' ? 'bg-purple-100 text-purple-800' :
-                            request.status === 'transferred' ? 'bg-slate-100 text-slate-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
+                          <Badge variant={
+                            request.status === 'pending_approval' ? 'warning' :
+                            request.status === 'listed' ? 'success' :
+                            request.status === 'bidding_open' ? 'accent' :
+                            request.status === 'sold' ? 'success' :
+                            request.status === 'transferred' ? 'default' :
+                            'danger'
+                          }>
                             {request.status.replace('_', ' ')}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <span className={`px-2 py-1 rounded text-xs font-medium ${
-                            request.approval_status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                            request.approval_status === 'approved' ? 'bg-emerald-100 text-emerald-800' :
-                            'bg-red-100 text-red-800'
-                          }`}>
+                          <Badge variant={
+                            request.approval_status === 'pending' ? 'warning' :
+                            request.approval_status === 'approved' ? 'success' :
+                            'danger'
+                          }>
                             {request.approval_status}
-                          </span>
+                          </Badge>
                         </td>
                         <td className="px-4 py-3 text-right text-sm space-x-2">
                           {request.approval_status === 'pending' && (
-                            <button onClick={() => handleApproveRequest(request.id)} className="text-emerald-600 hover:text-emerald-900">Approve</button>
+                            <Button size="sm" variant="primary" onClick={() => handleApproveRequest(request.id)}>Approve</Button>
                           )}
                           {request.approval_status === 'approved' && !auction && (
-                            <button onClick={() => { setSelectedRequest(request); setIsAuctionModalOpen(true); }} className="text-blue-600 hover:text-blue-900">Create Auction</button>
+                            <Button size="sm" variant="primary" onClick={() => { setSelectedRequest(request); setIsAuctionModalOpen(true); }}>Create Auction</Button>
                           )}
                         </td>
                       </tr>
@@ -662,49 +734,49 @@ export default function VehicleDisposalModule() {
         </div>
 
         {/* Auctions Table */}
-        <div className="p-6 border-t border-slate-200">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">Auctions</h3>
+        <div className="p-6 border-t border-border-muted">
+          <h3 className="text-lg font-semibold text-text-primary mb-4">Auctions</h3>
           {auctions.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-slate-600">No auctions created yet</p>
+              <p className="text-text-secondary">No auctions created yet</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-slate-200">
-                <thead className="bg-slate-50">
+              <table className="min-w-full divide-y divide-border-muted">
+                <thead className="bg-bg-elevated">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Auction Title</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Starting Price</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Current Bid</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Total Bids</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">End Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-slate-600 uppercase">Status</th>
-                    <th className="px-4 py-3 text-right text-xs font-medium text-slate-600 uppercase">Actions</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Auction Title</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Starting Price</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Current Bid</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Total Bids</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">End Date</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-text-secondary uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-slate-200">
+                <tbody className="bg-bg-secondary divide-y divide-border-muted">
                   {auctions.map((auction) => (
-                    <tr key={auction.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm font-medium text-slate-900">{auction.auction_type} Auction</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">${auction.starting_price.toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">${(auction.current_highest_bid || 0).toLocaleString()}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{auction.total_bids || 0}</td>
-                      <td className="px-4 py-3 text-sm text-slate-700">{new Date(auction.end_date).toLocaleDateString()}</td>
+                    <tr key={auction.id} className="hover:bg-bg-elevated">
+                      <td className="px-4 py-3 text-sm font-medium text-text-primary">{auction.auction_type} Auction</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">${auction.starting_price.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">${(auction.current_highest_bid || 0).toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">{auction.total_bids || 0}</td>
+                      <td className="px-4 py-3 text-sm text-text-secondary">{new Date(auction.end_date).toLocaleDateString()}</td>
                       <td className="px-4 py-3 text-sm">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          auction.auction_status === 'scheduled' ? 'bg-slate-100 text-slate-800' :
-                          auction.auction_status === 'active' ? 'bg-blue-100 text-blue-800' :
-                          auction.auction_status === 'closed' ? 'bg-emerald-100 text-emerald-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                        <Badge variant={
+                          auction.auction_status === 'scheduled' ? 'default' :
+                          auction.auction_status === 'active' ? 'accent' :
+                          auction.auction_status === 'closed' ? 'success' :
+                          'danger'
+                        }>
                           {auction.auction_status}
-                        </span>
+                        </Badge>
                       </td>
                       <td className="px-4 py-3 text-right text-sm space-x-2">
                         {auction.auction_status === 'active' && (
                           <>
-                            <button onClick={() => { setSelectedAuction(auction); setIsBidModalOpen(true); }} className="text-blue-600 hover:text-blue-900">Place Bid</button>
-                            <button onClick={() => handleCloseAuction(auction.id)} className="text-emerald-600 hover:text-emerald-900">Close</button>
+                            <Button size="sm" variant="primary" onClick={() => { setSelectedAuction(auction); setIsBidModalOpen(true); }}>Place Bid</Button>
+                            <Button size="sm" variant="primary" onClick={() => handleCloseAuction(auction.id)}>Close</Button>
                           </>
                         )}
                       </td>
@@ -715,7 +787,7 @@ export default function VehicleDisposalModule() {
             </div>
           )}
         </div>
-      </div>
+      </Card>
 
       {/* Modals */}
       <Modal isOpen={isRequestModalOpen} onClose={() => setIsRequestModalOpen(false)} title="New Disposal Request">

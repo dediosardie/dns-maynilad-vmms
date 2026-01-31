@@ -6,6 +6,7 @@ import Modal from './Modal';
 import { vehicleService } from '../services/supabaseService';
 import { notificationService } from '../services/notificationService';
 import { auditLogService } from '../services/auditLogService';
+import { Button, Card, Input } from './ui';
 
 export default function VehicleModule() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -205,103 +206,100 @@ export default function VehicleModule() {
     <div className="space-y-6">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Total Vehicles</p>
-              <p className="text-2xl font-bold text-slate-900 mt-1">{filteredVehicles.length}</p>
+              <p className="text-sm font-medium text-text-secondary">Total Vehicles</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{filteredVehicles.length}</p>
             </div>
-            <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-accent-soft rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Active</p>
-              <p className="text-2xl font-bold text-emerald-600 mt-1">{filteredVehicles.filter(v => v.status === 'active').length}</p>
+              <p className="text-sm font-medium text-text-secondary">Active</p>
+              <p className="text-2xl font-bold text-emerald-500 mt-1">{filteredVehicles.filter(v => v.status === 'active').length}</p>
             </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-emerald-500/10 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Maintenance</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{filteredVehicles.filter(v => v.status === 'maintenance').length}</p>
+              <p className="text-sm font-medium text-text-secondary">Maintenance</p>
+              <p className="text-2xl font-bold text-amber-500 mt-1">{filteredVehicles.filter(v => v.status === 'maintenance').length}</p>
             </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-amber-500/10 rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
           </div>
-        </div>
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 hover:shadow-md transition-shadow">
+        </Card>
+        <Card className="hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-slate-600">Disposed</p>
-              <p className="text-2xl font-bold text-slate-600 mt-1">{filteredVehicles.filter(v => v.status === 'disposed').length}</p>
+              <p className="text-sm font-medium text-text-secondary">Disposed</p>
+              <p className="text-2xl font-bold text-text-secondary mt-1">{filteredVehicles.filter(v => v.status === 'disposed').length}</p>
             </div>
-            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center">
-              <svg className="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-12 h-12 bg-bg-elevated rounded-xl flex items-center justify-center">
+              <svg className="w-6 h-6 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Main Content Card */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-slate-200">
+      <Card>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 border-b border-border-muted">
           <div className="flex-1">
-            <h2 className="text-xl font-semibold text-slate-900">Vehicle Fleet</h2>
-            <p className="text-sm text-slate-600 mt-1">Manage and monitor your vehicle inventory</p>
+            <h2 className="text-xl font-semibold text-text-primary">Vehicle Fleet</h2>
+            <p className="text-sm text-text-secondary mt-1">Manage and monitor your vehicle inventory</p>
           </div>
           <div className="flex items-center gap-3">
             <div className="relative">
-              <input
+              <Input
                 type="search"
                 placeholder="Search vehicles..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-64 pl-10 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                className="w-64 pl-10"
               />
-              <svg className="absolute left-3 top-2.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="absolute left-3 top-2.5 w-4 h-4 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <button
-              onClick={handleAddVehicle}
-              className="inline-flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-red-600 to-red-700 text-white rounded-lg hover:from-red-700 hover:to-red-800 transition-all shadow-md hover:shadow-lg font-medium text-sm whitespace-nowrap"
-            >
+            <Button onClick={handleAddVehicle} variant="primary" className="whitespace-nowrap">
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
               Add Vehicle
-            </button>
+            </Button>
           </div>
         </div>
         
         {error && (
-          <div className="mx-6 mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-800">{error}</p>
+          <div className="mx-6 mt-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+            <p className="text-sm text-red-500">{error}</p>
           </div>
         )}
         
         {isLoading ? (
           <div className="flex justify-center items-center py-20">
             <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-              <p className="text-slate-600 mt-4">Loading vehicles...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-accent"></div>
+              <p className="text-text-secondary mt-4">Loading vehicles...</p>
             </div>
           </div>
         ) : (
@@ -315,7 +313,7 @@ export default function VehicleModule() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       <Modal
         isOpen={isModalOpen}

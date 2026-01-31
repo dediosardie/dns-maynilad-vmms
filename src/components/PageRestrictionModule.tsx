@@ -3,6 +3,7 @@ import { PageRestriction } from '../types';
 import PageRestrictionTable from './PageRestrictionTable';
 import PageRestrictionForm from './PageRestrictionForm';
 import Modal from './Modal';
+import { Card, Button } from './ui';
 import { pageRestrictionService } from '../services/pageRestrictionService';
 import { notificationService } from '../services/notificationService';
 import { auditLogService } from '../services/auditLogService';
@@ -158,18 +159,19 @@ export default function PageRestrictionModule() {
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Page Restrictions</h1>
-          <p className="mt-1 text-sm text-slate-600">
+          <h1 className="text-2xl font-bold text-text-primary">Page Restrictions</h1>
+          <p className="mt-1 text-sm text-text-secondary">
             Manage page-level access control for different user roles
           </p>
         </div>
         {canModify && (
-          <button
+          <Button
             onClick={handleAddNew}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            variant="primary"
+            size="md"
           >
             Add New Restriction
-          </button>
+          </Button>
         )}
       </div>
 
@@ -181,112 +183,104 @@ export default function PageRestrictionModule() {
       )}
 
       {/* Info Box */}
-      <div className="bg-blue-50 border border-blue-200 rounded-md p-4">
+      <Card className="bg-bg-elevated border-border-muted">
         <div className="flex">
           <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg className="h-5 w-5 text-accent" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
             </svg>
           </div>
           <div className="ml-3">
-            <p className="text-sm text-blue-700">
+            <p className="text-sm text-text-secondary">
               Page restrictions control which user roles can access specific pages in the system. 
               Enable or disable access for each role individually. Changes take effect immediately.
             </p>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Statistics */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-slate-500 truncate">Total Pages</dt>
-                  <dd className="text-lg font-semibold text-slate-900">{restrictions.length}</dd>
-                </dl>
-              </div>
+        <Card>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-text-secondary truncate">Total Pages</dt>
+                <dd className="text-lg font-semibold text-text-primary">{restrictions.length}</dd>
+              </dl>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-slate-500 truncate">Active</dt>
-                  <dd className="text-lg font-semibold text-slate-900">
-                    {restrictions.filter(r => r.is_active).length}
-                  </dd>
-                </dl>
-              </div>
+        <Card>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-text-secondary truncate">Active</dt>
+                <dd className="text-lg font-semibold text-text-primary">
+                  {restrictions.filter(r => r.is_active).length}
+                </dd>
+              </dl>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-slate-500 truncate">Inactive</dt>
-                  <dd className="text-lg font-semibold text-slate-900">
-                    {restrictions.filter(r => !r.is_active).length}
-                  </dd>
-                </dl>
-              </div>
+        <Card>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 715.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-text-secondary truncate">Inactive</dt>
+                <dd className="text-lg font-semibold text-text-primary">
+                  {restrictions.filter(r => !r.is_active).length}
+                </dd>
+              </dl>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <svg className="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                </svg>
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-slate-500 truncate">Your Role</dt>
-                  <dd className="text-sm font-medium text-slate-900 capitalize">
-                    {currentUserRole.replace(/_/g, ' ')}
-                  </dd>
-                </dl>
-              </div>
+        <Card>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+            </div>
+            <div className="ml-5 w-0 flex-1">
+              <dl>
+                <dt className="text-sm font-medium text-text-secondary truncate">Your Role</dt>
+                <dd className="text-sm font-medium text-text-primary capitalize">
+                  {currentUserRole.replace(/_/g, ' ')}
+                </dd>
+              </dl>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Table */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <Card className="overflow-hidden">
         <PageRestrictionTable
           restrictions={restrictions}
           onEdit={handleEdit}
           onDelete={handleDeleteRestriction}
           currentUserRole={currentUserRole}
         />
-      </div>
+      </Card>
 
       {/* Modal */}
       <Modal

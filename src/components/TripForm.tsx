@@ -1,7 +1,6 @@
 // Trip Form Component - Defined per trip-scheduling-module.md
 import React, { useState, useEffect } from 'react';
-import { Trip, Vehicle, Driver } from '../types';
-
+import { Trip, Vehicle, Driver } from '../types';import { Input, Select, Textarea, Button } from './ui';
 interface TripFormProps {
   onSave: (trip: Omit<Trip, 'id' | 'created_at' | 'updated_at'>) => void;
   onUpdate?: (trip: Trip) => void;
@@ -150,15 +149,12 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
       <div className="grid grid-cols-2 gap-6">
         {/* Vehicle (select, required, from active vehicles) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Vehicle <span className="text-red-600">*</span>
-          </label>
-          <select
+          <Select
+            label={<>Vehicle <span className="text-red-600">*</span></>}
             name="vehicle_id"
             value={formData.vehicle_id}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Select Vehicle</option>
             {activeVehicles.map(vehicle => (
@@ -166,102 +162,81 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
                 {vehicle.plate_number || vehicle.conduction_number} - {vehicle.make} {vehicle.model}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Driver (select, required, from available drivers) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Driver <span className="text-red-600">*</span>
-          </label>
-          <select
+          <Select
+            label={<>Driver <span className="text-red-600">*</span></>}
             name="driver_id"
             value={formData.driver_id}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">Select Driver</option>
             {drivers.filter(d => d.status === 'active').map(driver => (
               <option key={driver.id} value={driver.id}>
-                {driver.full_name}
+                {driver.full_name} - {driver.license_number}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Origin (text/autocomplete, required) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Origin <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Origin <span className="text-red-600">*</span></>}
             type="text"
             name="origin"
             value={formData.origin}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            placeholder="Enter origin address"
           />
         </div>
 
         {/* Destination (text/autocomplete, required) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Destination <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Destination <span className="text-red-600">*</span></>}
             type="text"
             name="destination"
             value={formData.destination}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            placeholder="Enter destination address"
           />
         </div>
 
         {/* Planned Departure (datetime, required) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Planned Departure <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Planned Departure <span className="text-red-600">*</span></>}
             type="datetime-local"
             name="planned_departure"
             value={formData.planned_departure}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         {/* Planned Arrival (datetime, required) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Planned Arrival <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Planned Arrival <span className="text-red-600">*</span></>}
             type="datetime-local"
             name="planned_arrival"
             value={formData.planned_arrival}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
 
         {/* Distance (number, required, km) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Distance (km) <span className="text-red-600">*</span>
-            {isCalculatingDistance && (
-              <span className="ml-2 text-xs text-blue-600">Calculating...</span>
-            )}
-            {distanceError && (
-              <span className="ml-2 text-xs text-amber-600">{distanceError}</span>
-            )}
-          </label>
-          <input
+          <Input
+            label={<>Distance (km) <span className="text-red-600">*</span></>}
             type="number"
             name="distance_km"
             value={formData.distance_km}
@@ -269,20 +244,21 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
             required
             min="0"
             step="0.1"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             disabled={isCalculatingDistance}
+            helperText="Distance auto-calculates from Google Maps"
           />
-          <p className="mt-1 text-xs text-slate-500">
-            Distance auto-calculates from Google Maps
-          </p>
+          {isCalculatingDistance && (
+            <p className="mt-1 text-xs text-blue-600">Calculating...</p>
+          )}
+          {distanceError && (
+            <p className="mt-1 text-xs text-amber-600">{distanceError}</p>
+          )}
         </div>
 
         {/* Estimated Fuel Consumption (number, required, liters) */}
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1.5">
-            Estimated Fuel Consumption (liters) <span className="text-red-600">*</span>
-          </label>
-          <input
+          <Input
+            label={<>Estimated Fuel Consumption (liters) <span className="text-red-600">*</span></>}
             type="number"
             name="estimated_fuel_consumption"
             value={formData.estimated_fuel_consumption}
@@ -290,33 +266,27 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
             required
             min="0"
             step="0.1"
-            className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           />
         </div>
       </div>
 
       {/* Notes (textarea, optional) */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1.5">
-          Notes
-        </label>
-        <textarea
+        <Textarea
+          label="Notes"
           name="notes"
           value={formData.notes || ''}
           onChange={handleChange}
           rows={3}
-          className="w-full px-3 py-2 border border-slate-300 rounded-md text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          placeholder="Add any additional notes about the trip"
         />
       </div>
 
       {/* Actions: Save/Update (primary, submit) */}
       <div className="flex justify-end gap-3">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors"
-        >
+        <Button type="submit" variant="primary" size="md">
           {initialData ? 'Update Trip' : 'Create Trip'}
-        </button>
+        </Button>
       </div>
     </form>
   );
