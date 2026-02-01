@@ -136,6 +136,51 @@ export default function ReportingAnalyticsDashboard() {
   const costPerKm = totalDistance > 0 ? (totalOperatingCost / totalDistance).toFixed(2) : '0';
   const costPerVehiclePerMonth = totalVehicles > 0 ? (totalOperatingCost / totalVehicles / 12).toFixed(2) : '0';
 
+  // Calculate Insurance Status
+  const getInsuranceStatusVehicles = () => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-11
+    
+    return vehicles.filter(vehicle => {
+      if (!vehicle.insurance_expiry) return false;
+      
+      const expiryDate = new Date(vehicle.insurance_expiry);
+      const expiryYear = expiryDate.getFullYear();
+      const expiryMonth = expiryDate.getMonth();
+      
+      // Previous months (past), current month, or next month
+      if (expiryYear < currentYear) return true; // Expired (previous year)
+      if (expiryYear === currentYear) {
+        // Previous months, current month, or next month
+        return expiryMonth <= currentMonth + 1;
+      }
+      if (expiryYear === currentYear + 1 && currentMonth === 11 && expiryMonth === 0) {
+        // Next month when current is December
+        return true;
+      }
+      
+      return false;
+    }).sort((a, b) => {
+      // Sort by expiry date ascending (earliest first)
+      return new Date(a.insurance_expiry!).getTime() - new Date(b.insurance_expiry!).getTime();
+    });
+  };
+
+  const insuranceStatusVehicles = getInsuranceStatusVehicles();
+  const expiredInsurance = insuranceStatusVehicles.filter(v => new Date(v.insurance_expiry!) < new Date()).length;
+  const expiringThisMonth = insuranceStatusVehicles.filter(v => {
+    const expiry = new Date(v.insurance_expiry!);
+    const now = new Date();
+    return expiry.getMonth() === now.getMonth() && expiry.getFullYear() === now.getFullYear() && expiry >= now;
+  }).length;
+  const expiringNextMonth = insuranceStatusVehicles.filter(v => {
+    const expiry = new Date(v.insurance_expiry!);
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return expiry.getMonth() === nextMonth.getMonth() && expiry.getFullYear() === nextMonth.getFullYear();
+  }).length;
+
   return (
     <div className="space-y-6">
       {isLoading ? (
@@ -154,6 +199,7 @@ export default function ReportingAnalyticsDashboard() {
               {[
                 { id: 'dashboard', label: 'Dashboard Overview' },
                 { id: 'fleet', label: 'Fleet Performance' },
+                { id: 'insurance', label: 'Insurance Status' },
                 { id: 'maintenance', label: 'Maintenance Report' },
                 { id: 'driver', label: 'Driver Performance' },
                 { id: 'fuel', label: 'Fuel Efficiency' },
@@ -429,6 +475,111 @@ export default function ReportingAnalyticsDashboard() {
               ))}
             </TableBody>
           </Table>
+        </Card>
+      )}
+
+      {/* Insurance Status Report */}
+      {selectedReport === 'insurance' && (
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-semibold text-text-primary">Insurance Status Report</h2>
+            <Button variant="primary"
+              size="md"
+              className="inline-flex items-center">
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Export PDF
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div className="bg-bg-elevated rounded-lg p-4">
+              <p className="text-sm text-text-secondary">Total Vehicles</p>
+              <p className="text-2xl font-bold text-text-primary mt-1">{insuranceStatusVehicles.length}</p>
+            </div>
+            <div className="bg-red-50 rounded-lg p-4">
+              <p className="text-sm text-red-600">Expired</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{expiredInsurance}</p>
+            </div>
+            <div className="bg-amber-50 rounded-lg p-4">
+              <p className="text-sm text-amber-600">Expiring This Month</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">{expiringThisMonth}</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-4">
+              <p className="text-sm text-blue-600">Expiring Next Month</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">{expiringNextMonth}</p>
+            </div>
+          </div>
+
+          {insuranceStatusVehicles.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-bg-elevated mb-4">
+                <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-text-primary mb-1">All Insurance Up to Date</h3>
+              <p className="text-text-secondary">No vehicles with expired or expiring insurance</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Plate Number</TableHead>
+                  <TableHead>Conduction #</TableHead>
+                  <TableHead>Insurance Expiry</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Days Until Expiry</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {insuranceStatusVehicles.map(vehicle => {
+                  const expiryDate = new Date(vehicle.insurance_expiry!);
+                  const now = new Date();
+                  const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                  const isExpired = daysUntilExpiry < 0;
+                  const isExpiringThisMonth = !isExpired && expiryDate.getMonth() === now.getMonth() && expiryDate.getFullYear() === now.getFullYear();
+
+                  return (
+                    <TableRow key={vehicle.id}>
+                      <TableCell className="font-medium">
+                        {vehicle.make} {vehicle.model} {vehicle.variant ? `(${vehicle.variant})` : ''}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.plate_number || '-'}
+                      </TableCell>
+                      <TableCell className="font-mono">
+                        {vehicle.conduction_number || '-'}
+                      </TableCell>
+                      <TableCell>
+                        {vehicle.insurance_expiry}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={
+                          isExpired ? 'danger' :
+                          isExpiringThisMonth ? 'warning' :
+                          'default'
+                        }>
+                          {isExpired ? 'Expired' : isExpiringThisMonth ? 'Expiring This Month' : 'Expiring Next Month'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`font-medium ${
+                          isExpired ? 'text-red-600' :
+                          isExpiringThisMonth ? 'text-amber-600' :
+                          'text-blue-600'
+                        }`}>
+                          {isExpired ? `${Math.abs(daysUntilExpiry)} days ago` : `${daysUntilExpiry} days`}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </Card>
       )}
 

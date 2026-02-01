@@ -139,6 +139,20 @@ export const driverStorage = {
       throw error;
     }
   },
+
+  async delete(id: string): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('drivers')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error deleting driver:', error);
+      throw error;
+    }
+  },
 };
 
 // Maintenance operations

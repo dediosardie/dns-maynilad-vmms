@@ -7,9 +7,10 @@ interface VehicleTableProps {
   vehicles: Vehicle[];
   onDispose: (vehicleId: string, disposalReason: string, currentMileage: number) => void;
   onEdit: (vehicle: Vehicle) => void;
+  onDelete: (vehicleId: string) => void;
 }
 
-export default function VehicleTable({ vehicles, onDispose, onEdit }: VehicleTableProps) {
+export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: VehicleTableProps) {
   const [isDisposalModalOpen, setIsDisposalModalOpen] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [disposalReason, setDisposalReason] = useState<string>('end_of_life');
@@ -132,6 +133,19 @@ export default function VehicleTable({ vehicles, onDispose, onEdit }: VehicleTab
                     size="sm"
                   >
                     Dispose
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Are you sure you want to delete ${vehicle.plate_number || vehicle.conduction_number}?`)) {
+                        onDelete(vehicle.id);
+                      }
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    Delete
                   </Button>
                 </>
               )}

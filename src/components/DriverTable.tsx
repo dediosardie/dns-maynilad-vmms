@@ -5,9 +5,10 @@ interface DriverTableProps {
   drivers: Driver[];
   onSuspend: (id: string) => void;
   onEdit: (driver: Driver) => void;
+  onDelete: (id: string) => void;
 }
 
-export default function DriverTable({ drivers, onSuspend, onEdit }: DriverTableProps) {
+export default function DriverTable({ drivers, onSuspend, onEdit, onDelete }: DriverTableProps) {
   const handleSuspend = (driver: Driver) => {
     if (window.confirm(`Are you sure you want to suspend driver ${driver.full_name}?`)) {
       onSuspend(driver.id);
@@ -76,6 +77,19 @@ export default function DriverTable({ drivers, onSuspend, onEdit }: DriverTableP
                     size="sm"
                   >
                     Suspend
+                  </Button>
+                  <Button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm(`Are you sure you want to delete driver ${driver.full_name}?`)) {
+                        onDelete(driver.id);
+                      }
+                    }}
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>

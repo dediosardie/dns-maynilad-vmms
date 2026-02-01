@@ -108,6 +108,39 @@ export default function DriverModule() {
     }
   };
 
+  const handleDeleteDriver = async (id: string) => {
+    try {
+      const driver = drivers.find(d => d.id === id);
+      await driverStorage.delete(id);
+      setDrivers(drivers.filter(d => d.id !== id));
+      
+      notificationService.success(
+        'Driver Deleted',
+        `${driver?.full_name || 'Driver'} has been successfully deleted`
+      );
+      await auditLogService.createLog(
+        'Driver Deleted',
+        `Deleted driver ${driver?.full_name} (License: ${driver?.license_number})`
+      );
+    } catch (error: any) {
+      console.error('Failed to delete driver:', error);
+      
+      // Check if it's a foreign key constraint error
+      if (error?.message?.includes('trips_driver_id_fkey') || 
+          error?.message?.includes('still referenced') ||
+          error?.code === '23503') {
+        const driver = drivers.find(d => d.id === id);
+        notificationService.error(
+          'Cannot Delete Driver',
+          `${driver?.full_name || 'Driver'} cannot be deleted because they have trip history. Suspend the driver instead.`
+        );
+        alert(`Cannot delete ${driver?.full_name || 'this driver'}.\n\nThis driver has existing trip records and cannot be deleted.\nPlease suspend the driver instead to prevent future assignments.`);
+      } else {
+        notificationService.error('Failed to Delete Driver', 'Unable to delete driver. Please try again.');
+      }
+    }
+  };
+
   const handleEditDriver = (driver: Driver) => {
     setEditingDriver(driver);
     setIsModalOpen(true);
@@ -194,7 +227,7 @@ export default function DriverModule() {
           </div>
         ) : (
           <div className="p-6">
-            <DriverTable drivers={drivers} onSuspend={handleSuspendDriver} onEdit={handleEditDriver} />
+            <DriverTable drivers={drivers} onSuspend={handleSuspendDriver} onEdit={handleEditDriver} onDelete={handleDeleteDriver} />
           </div>
         )}
       </Card>

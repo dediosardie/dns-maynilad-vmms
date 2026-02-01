@@ -285,6 +285,26 @@ export default function VehicleModule() {
     setIsModalOpen(true);
   };
 
+  const handleDeleteVehicle = async (vehicleId: string) => {
+    try {
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      await vehicleService.delete(vehicleId);
+      setVehicles(vehicles.filter(v => v.id !== vehicleId));
+      
+      notificationService.success(
+        'Vehicle Deleted',
+        `Vehicle ${vehicle?.plate_number || vehicle?.conduction_number} has been successfully deleted`
+      );
+      await auditLogService.createLog(
+        'Vehicle Deleted',
+        `Deleted vehicle ${vehicle?.plate_number || vehicle?.conduction_number}`
+      );
+    } catch (error) {
+      console.error('Failed to delete vehicle:', error);
+      notificationService.error('Failed to Delete', 'Unable to delete vehicle. Please try again.');
+    }
+  };
+
   const handleAddVehicle = () => {
     setEditingVehicle(undefined);
     setIsViewOnly(false);
@@ -423,6 +443,7 @@ export default function VehicleModule() {
                 vehicles={filteredVehicles}
                 onDispose={handleDisposeVehicle}
                 onEdit={handleEditVehicle}
+                onDelete={handleDeleteVehicle}
               />
             </div>
           </div>
