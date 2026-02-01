@@ -63,6 +63,7 @@ Please provide a comprehensive analysis in the following JSON format:
   "insights": ["Key insight 1", "Key insight 2", "Key insight 3"],
   "recommendations": ["Actionable recommendation 1", "Actionable recommendation 2", "Actionable recommendation 3"],
   "costTrends": "Analysis of cost trends and patterns",
+  "Vehicle Efficiency: Fuel consumption per vehicle (L/km), Identify top and bottom performing vehicles, Detect sudden drops in fuel efficiency
   "efficiencyScore": 75, // Score from 0-100 based on efficiency
   "anomalies": ["Any unusual patterns or outliers detected"]
 }

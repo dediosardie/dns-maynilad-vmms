@@ -20,6 +20,8 @@ export default function VehicleDisposalModule() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingRequest, setEditingRequest] = useState<DisposalRequest | undefined>();
   const [isEditRequestModalOpen, setIsEditRequestModalOpen] = useState(false);
+  const [isAuctionDetailsModalOpen, setIsAuctionDetailsModalOpen] = useState(false);
+  const [selectedAuctionForDetails, setSelectedAuctionForDetails] = useState<DisposalAuction | undefined>();
 
   // Format number with thousand separators
   const formatNumber = (num: number, decimals: number = 2): string => {
@@ -59,9 +61,23 @@ export default function VehicleDisposalModule() {
           }
         }
         
-        setAuctions(allAuctions);
+        // Calculate current highest bid and total bids for each auction
+        const auctionsWithBidInfo = allAuctions.map(auction => {
+          const auctionBids = allBids.filter(bid => bid.auction_id === auction.id);
+          const highestBid = auctionBids.length > 0 
+            ? Math.max(...auctionBids.map(bid => bid.bid_amount)) 
+            : 0;
+          
+          return {
+            ...auction,
+            current_highest_bid: highestBid,
+            total_bids: auctionBids.length
+          };
+        });
+        
+        setAuctions(auctionsWithBidInfo);
         setBids(allBids);
-        console.log('Loaded auctions:', allAuctions.length, 'bids:', allBids.length);
+        console.log('Loaded auctions:', auctionsWithBidInfo.length, 'bids:', allBids.length);
       } catch (error) {
         console.error('Error loading disposal data:', error);
       } finally {
@@ -351,6 +367,172 @@ export default function VehicleDisposalModule() {
     );
   };
 
+  // Auction Details View - Shows vehicle and bidder information for awarded auctions
+  const AuctionDetailsView = ({ auction }: { auction: DisposalAuction }) => {
+    const disposalRequest = disposalRequests.find(r => r.id === auction.disposal_id);
+    const vehicle = vehicles.find(v => v.id === disposalRequest?.vehicle_id);
+    const winningBid = bids.find(b => b.id === auction.winner_id);
+    const allAuctionBids = bids.filter(b => b.auction_id === auction.id).sort((a, b) => b.bid_amount - a.bid_amount);
+
+    return (
+      <div className="space-y-6">
+        {/* Auction Summary */}
+        <div className="bg-accent-soft border border-border-muted rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Auction Summary</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-text-secondary">Auction Type</p>
+              <p className="text-base font-medium text-text-primary capitalize">{auction.auction_type}</p>
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Status</p>
+              <p className="text-base font-medium text-text-primary">
+                <Badge variant="success">Awarded</Badge>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Starting Price</p>
+              <p className="text-base font-medium text-text-primary">{formatCurrency(auction.starting_price)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Winning Bid</p>
+              <p className="text-base font-medium text-emerald-600">{formatCurrency(auction.winning_bid || 0)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">Start Date</p>
+              <p className="text-base font-medium text-text-primary">{new Date(auction.start_date).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <p className="text-sm text-text-secondary">End Date</p>
+              <p className="text-base font-medium text-text-primary">{new Date(auction.end_date).toLocaleDateString()}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Vehicle Information */}
+        <div className="bg-bg-elevated border border-border-muted rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Vehicle Information</h3>
+          {vehicle ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-text-secondary">Plate Number</p>
+                <p className="text-base font-medium text-text-primary">{vehicle.plate_number}</p>
+              </div>
+              {vehicle.conduction_number && (
+                <div>
+                  <p className="text-sm text-text-secondary">Conduction Number</p>
+                  <p className="text-base font-medium text-text-primary">{vehicle.conduction_number}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-sm text-text-secondary">Make & Model</p>
+                <p className="text-base font-medium text-text-primary">{vehicle.make} {vehicle.model}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-secondary">Year</p>
+                <p className="text-base font-medium text-text-primary">{vehicle.year}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-secondary">VIN</p>
+                <p className="text-base font-medium text-text-primary">{vehicle.vin || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-secondary">Ownership Type</p>
+                <p className="text-base font-medium text-text-primary">{vehicle.ownership_type}</p>
+              </div>
+              {disposalRequest && (
+                <>
+                  <div>
+                    <p className="text-sm text-text-secondary">Condition Rating</p>
+                    <p className="text-base font-medium text-text-primary capitalize">{disposalRequest.condition_rating}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-text-secondary">Mileage</p>
+                    <p className="text-base font-medium text-text-primary">{disposalRequest.current_mileage.toLocaleString()} km</p>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <p className="text-text-secondary">Vehicle information not available</p>
+          )}
+        </div>
+
+        {/* Winning Bidder Information */}
+        <div className="bg-bg-elevated border border-border-muted rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Winning Bidder</h3>
+          {winningBid ? (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-text-secondary">Bidder Name</p>
+                <p className="text-base font-medium text-text-primary">{winningBid.bidder_name}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-secondary">Contact</p>
+                <p className="text-base font-medium text-text-primary">{winningBid.bidder_contact}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-secondary">Winning Bid Amount</p>
+                <p className="text-base font-medium text-emerald-600">{formatCurrency(winningBid.bid_amount)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-text-secondary">Bid Date</p>
+                <p className="text-base font-medium text-text-primary">{new Date(winningBid.bid_date).toLocaleString()}</p>
+              </div>
+              {winningBid.notes && (
+                <div className="col-span-2">
+                  <p className="text-sm text-text-secondary">Notes</p>
+                  <p className="text-base font-medium text-text-primary">{winningBid.notes}</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-text-secondary">Bidder information not available</p>
+          )}
+        </div>
+
+        {/* All Bids History */}
+        <div className="bg-bg-elevated border border-border-muted rounded-lg p-4">
+          <h3 className="text-lg font-semibold text-text-primary mb-3">Bid History ({allAuctionBids.length} bids)</h3>
+          {allAuctionBids.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border-muted">
+                <thead>
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">Bidder</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">Amount</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">Date</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-text-secondary uppercase">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border-muted">
+                  {allAuctionBids.map((bid, index) => (
+                    <tr key={bid.id} className={bid.id === auction.winner_id ? 'bg-emerald-50 dark:bg-emerald-900/10' : ''}>
+                      <td className="px-3 py-2 text-sm text-text-primary">{bid.bidder_name}</td>
+                      <td className="px-3 py-2 text-sm font-medium text-text-primary">{formatCurrency(bid.bid_amount)}</td>
+                      <td className="px-3 py-2 text-sm text-text-secondary">{new Date(bid.bid_date).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-sm">
+                        {bid.id === auction.winner_id ? (
+                          <Badge variant="success">Winner</Badge>
+                        ) : index === 0 ? (
+                          <Badge variant="default">Highest</Badge>
+                        ) : (
+                          <Badge variant="default">Outbid</Badge>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-text-secondary">No bids recorded</p>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // Bid Submission Form - per markdown Bid Submission Form section (6 fields)
   const BidSubmissionForm = ({ auction, onSubmit, onClose }: any) => {
     const currentHighestBid = bids.filter(b => b.auction_id === auction.id).reduce((max, b) => Math.max(max, b.bid_amount), 0);
@@ -594,9 +776,14 @@ export default function VehicleDisposalModule() {
   // Action: Close Auction (success) - per markdown
   const handleCloseAuction = async (auctionId: string) => {
     const auction = auctions.find(a => a.id === auctionId);
-    if (!auction) return;
+    if (!auction) {
+      console.error('Auction not found:', auctionId);
+      return;
+    }
 
     const auctionBids = bids.filter(b => b.auction_id === auctionId);
+    console.log('Closing auction:', auctionId, 'Found bids:', auctionBids.length);
+    
     if (auctionBids.length === 0) {
       alert('Cannot close auction with no bids');
       return;
@@ -606,14 +793,20 @@ export default function VehicleDisposalModule() {
     
     // Check if reserve price met per business rules
     if (auction.reserve_price && winningBid.bid_amount < auction.reserve_price) {
-      alert('Reserve price not met. Auction cannot be closed.');
+      alert(`Reserve price not met. Reserve: ${formatCurrency(auction.reserve_price)}, Highest Bid: ${formatCurrency(winningBid.bid_amount)}`);
+      return;
+    }
+
+    // Confirm before closing
+    if (!window.confirm(`Close auction with winning bid of ${formatCurrency(winningBid.bid_amount)} from ${winningBid.bidder_name}?`)) {
       return;
     }
 
     try {
+      console.log('Updating auction status to closed...');
       await disposalService.updateAuction(auctionId, { 
         auction_status: 'closed', 
-        winner_id: winningBid.bidder_name, 
+        winner_id: winningBid.id, 
         winning_bid: winningBid.bid_amount 
       });
       
@@ -624,6 +817,7 @@ export default function VehicleDisposalModule() {
       ));
       
       // Update disposal request status
+      console.log('Updating disposal request status to sold...');
       const updatedRequest = await disposalService.updateRequest(auction.disposal_id, { status: 'sold' });
       setDisposalRequests(disposalRequests.map(r =>
         r.id === auction.disposal_id ? updatedRequest : r
@@ -637,9 +831,11 @@ export default function VehicleDisposalModule() {
         'Auction Closed',
         `Closed auction with winning bid of ${formatCurrency(winningBid.bid_amount)} by ${winningBid.bidder_name}`
       );
+      console.log('Auction closed successfully');
     } catch (error: any) {
       console.error('Failed to close auction:', error);
       notificationService.error('Failed to Close Auction', error.message || 'Unable to close auction.');
+      alert(`Error closing auction: ${error.message || 'Unknown error'}`);
     }
   };
 
@@ -904,8 +1100,13 @@ export default function VehicleDisposalModule() {
                       key={auction.id} 
                       className="hover:bg-bg-elevated cursor-pointer transition-colors"
                       onDoubleClick={() => {
-                        setSelectedAuction(auction);
-                        setIsBidModalOpen(true);
+                        if (auction.auction_status === 'awarded') {
+                          setSelectedAuctionForDetails(auction);
+                          setIsAuctionDetailsModalOpen(true);
+                        } else if (auction.auction_status === 'active') {
+                          setSelectedAuction(auction);
+                          setIsBidModalOpen(true);
+                        }
                       }}
                     >
                       <td className="px-4 py-3 text-sm font-medium text-text-primary">{auction.auction_type} Auction</td>
@@ -940,7 +1141,14 @@ export default function VehicleDisposalModule() {
                           <Button size="sm" variant="primary" onClick={(e) => { e.stopPropagation(); handleAwardAuction(auction.id); }}>Award to Winner</Button>
                         )}
                         {auction.auction_status === 'awarded' && (
-                          <Badge variant="success">Completed</Badge>
+                          <div className="flex items-center justify-end gap-2">
+                            <span className="text-sm text-text-secondary">
+                              Winner: <span className="font-semibold text-text-primary">
+                                {bids.find(b => b.id === auction.winner_id)?.bidder_name || 'Unknown'}
+                              </span>
+                            </span>
+                            <Badge variant="success">Completed</Badge>
+                          </div>
                         )}
                         {auction.auction_status === 'cancelled' && (
                           <Badge variant="danger">Cancelled</Badge>
@@ -973,6 +1181,17 @@ export default function VehicleDisposalModule() {
       {selectedAuction && (
         <Modal isOpen={isBidModalOpen} onClose={() => { setIsBidModalOpen(false); setSelectedAuction(undefined); }} title="Place Bid">
           <BidSubmissionForm auction={selectedAuction} onSubmit={handleSubmitBid} onClose={() => { setIsBidModalOpen(false); setSelectedAuction(undefined); }} />
+        </Modal>
+      )}
+
+      {selectedAuctionForDetails && (
+        <Modal 
+          isOpen={isAuctionDetailsModalOpen} 
+          onClose={() => { setIsAuctionDetailsModalOpen(false); setSelectedAuctionForDetails(undefined); }} 
+          title="Auction Details"
+          size="large"
+        >
+          <AuctionDetailsView auction={selectedAuctionForDetails} />
         </Modal>
       )}
         </>
