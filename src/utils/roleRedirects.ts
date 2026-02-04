@@ -11,7 +11,7 @@ import { UserRole } from '../config/rolePermissions';
  * Default landing pages for each role
  */
 export const ROLE_DEFAULT_PAGES: Record<UserRole, string> = {
-  driver: '/trips',
+  driver: '/attendance',
   administration: '/reports',
   maintenance_team: '/vehicles',
   fleet_manager: '/reports',

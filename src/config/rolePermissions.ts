@@ -36,6 +36,10 @@ export type Permission =
   | 'trips:create'
   | 'trips:update'
   | 'trips:delete'
+  | 'attendance:read'
+  | 'attendance:create'
+  | 'attendance:update'
+  | 'attendance:delete'
   | 'fuel:read'
   | 'fuel:create'
   | 'fuel:update'
@@ -75,6 +79,7 @@ export type Module =
   | 'compliance'
   | 'disposal'
   | 'analytics'
+  | 'attendance'
   | 'users';
 
 /**
@@ -101,7 +106,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'leasing:update',
     'disposal:read',
     'compliance:read',
-    'analytics:read',
+    'attendance:read',
+    'attendance:create',
   ],
 
   // Maintenance Team: Perform maintenance and repairs
@@ -122,6 +128,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'fuel:create',
     'incidents:read', // Only own incidents
     'incidents:create',
+    'attendance:read',
+    'attendance:create'
   ],
 
   // Administration: Manage backend operations
@@ -148,6 +156,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     'compliance:update',
     'analytics:read',
     'users:read',
+    'attendance:read'
   ],
 
   // Client-Company Liaison: Coordinate with clients

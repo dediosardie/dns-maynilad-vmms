@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { DriverAttendance } from '../types';
 import { attendanceService } from '../services/attendanceService';
 import { authService } from '../services/authService';
@@ -12,19 +12,10 @@ export default function DriverAttendancePage() {
   const [error, setError] = useState<string | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
-  const [showCamera, setShowCamera] = useState(false);
+  const [capturing, setCapturing] = useState(false);
 
   useEffect(() => {
     loadCurrentDriver();
-    return () => {
-      // Cleanup camera stream on unmount
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
   }, []);
 
   useEffect(() => {
@@ -68,25 +59,62 @@ export default function DriverAttendancePage() {
     }
   };
 
-  const startCamera = async () => {
+  const captureImage = async () => {
+    setCapturing(true);
+    setError(null);
+
     try {
       // Check if getUserMedia is supported
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setError('Camera API is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Edge.');
+        setCapturing(false);
         return;
       }
 
+      // Request camera access and capture a single frame
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'user', width: 640, height: 480 },
       });
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
+
+      // Create video element to capture the frame
+      const video = document.createElement('video');
+      video.srcObject = mediaStream;
+      video.muted = true;
+      video.playsInline = true;
+
+      // Wait for video to be ready
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => {
+          video.play();
+          resolve();
+        };
+      });
+
+      // Wait a brief moment for the camera to adjust
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Capture frame to canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to blob and file
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const file = new File([blob], `attendance_${Date.now()}.jpg`, { type: 'image/jpeg' });
+            setImageFile(file);
+            setCapturedImage(canvas.toDataURL('image/jpeg'));
+          }
+        }, 'image/jpeg', 0.8);
       }
+
+      // Immediately stop camera stream
+      mediaStream.getTracks().forEach(track => track.stop());
       
-      setStream(mediaStream);
-      setShowCamera(true);
-      setError(null);
     } catch (error: any) {
       console.error('Camera access error:', error);
       
@@ -98,59 +126,20 @@ export default function DriverAttendancePage() {
       } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
         setError('Camera is already in use by another application. Please close other apps using the camera.');
       } else if (error.name === 'OverconstrainedError') {
-        setError('Camera settings are not supported. Trying with default settings...');
-        // Try again with relaxed constraints
-        try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (videoRef.current) {
-            videoRef.current.srcObject = fallbackStream;
-          }
-          setStream(fallbackStream);
-          setShowCamera(true);
-          setError(null);
-        } catch (fallbackError) {
-          setError('Unable to access camera with any settings. Please check your device.');
-        }
+        setError('Camera settings are not supported. Please check your device.');
       } else if (error.name === 'SecurityError') {
         setError('Camera access blocked due to security settings. Please ensure you are using HTTPS or localhost.');
       } else {
         setError(`Unable to access camera: ${error.message || 'Unknown error'}. Please check browser permissions.`);
       }
+    } finally {
+      setCapturing(false);
     }
-  };
-
-  const captureImage = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-
-    if (!context) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `attendance_${Date.now()}.jpg`, { type: 'image/jpeg' });
-        setImageFile(file);
-        setCapturedImage(canvas.toDataURL('image/jpeg'));
-        setShowCamera(false);
-        
-        // Stop camera stream
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
-      }
-    }, 'image/jpeg', 0.8);
   };
 
   const retakePhoto = () => {
     setCapturedImage(null);
     setImageFile(null);
-    startCamera();
   };
 
   const getLocation = (): Promise<{ latitude: number; longitude: number }> => {
@@ -182,8 +171,7 @@ export default function DriverAttendancePage() {
     }
 
     if (!capturedImage || !imageFile) {
-      setError('Please capture an image first');
-      startCamera();
+      setError('⚠️ Image required! Please capture your photo before recording attendance.');
       return;
     }
 
@@ -269,35 +257,23 @@ export default function DriverAttendancePage() {
         <Card className="p-3 bg-bg-secondary border border-border-muted">
           <h2 className="text-xs font-medium text-text-primary mb-2">Capture Photo</h2>
           
-          {!showCamera && !capturedImage && (
+          {!capturedImage ? (
             <Button
-              onClick={startCamera}
+              onClick={captureImage}
               variant="secondary"
               className="w-full text-sm py-3"
+              disabled={capturing}
             >
-              📷 Open Camera
+              {capturing ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current"></div>
+                  Capturing...
+                </span>
+              ) : (
+                '📷 Capture Photo'
+              )}
             </Button>
-          )}
-
-          {showCamera && (
-            <div className="space-y-2">
-              <video
-                ref={videoRef}
-                autoPlay
-                playsInline
-                className="w-full rounded-lg bg-black"
-              />
-              <Button
-                onClick={captureImage}
-                variant="primary"
-                className="w-full text-sm py-3"
-              >
-                📸 Capture Image
-              </Button>
-            </div>
-          )}
-
-          {capturedImage && (
+          ) : (
             <div className="space-y-2">
               <img
                 src={capturedImage}
@@ -313,26 +289,26 @@ export default function DriverAttendancePage() {
               </Button>
             </div>
           )}
-
-          <canvas ref={canvasRef} style={{ display: 'none' }} />
         </Card>
 
         {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-2">
           <Button
             onClick={() => handleAttendance('login')}
-            disabled={loading || hasActiveLogin || !capturedImage}
+            disabled={loading || hasActiveLogin || !capturedImage || !imageFile}
             variant="primary"
             className="py-6 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!capturedImage ? 'Please capture an image first' : hasActiveLogin ? 'Already logged in today' : 'Click to record login'}
           >
             {loading ? '⏳' : '🟢'} LOGIN
           </Button>
           
           <Button
             onClick={() => handleAttendance('logout')}
-            disabled={loading || !hasActiveLogin || !capturedImage}
+            disabled={loading || !hasActiveLogin || !capturedImage || !imageFile}
             variant="danger"
             className="py-6 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!capturedImage ? 'Please capture an image first' : !hasActiveLogin ? 'Please login first' : 'Click to record logout'}
           >
             {loading ? '⏳' : '🔴'} LOGOUT
           </Button>
