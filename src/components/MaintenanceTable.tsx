@@ -56,10 +56,19 @@ export default function MaintenanceTable({ maintenances, vehicles, onMarkComplet
                 Scheduled Date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Completed Date
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Status
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Cost
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Company
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
+                Mileage
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">
                 Description
@@ -85,6 +94,9 @@ export default function MaintenanceTable({ maintenances, vehicles, onMarkComplet
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
                   {maintenance.scheduled_date}
                 </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                  {maintenance.completed_date || '-'}
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                   <Badge variant={maintenance.status === 'completed' ? 'success' : 'warning'}>
                     {maintenance.status}
@@ -92,6 +104,12 @@ export default function MaintenanceTable({ maintenances, vehicles, onMarkComplet
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary font-mono">
                   {maintenance.cost ? formatCurrency(maintenance.cost) : 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                  {maintenance.company || '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+                  {maintenance.current_mileage ? maintenance.current_mileage.toLocaleString() : '-'}
                 </td>
                 <td className="px-6 py-4 text-sm text-text-primary max-w-xs truncate">
                   {maintenance.description || '-'}

@@ -17,6 +17,9 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     status: initialData?.status || 'pending',
     cost: initialData?.cost || undefined,
     description: initialData?.description || '',
+    company: initialData?.company ?? undefined,
+    current_mileage: initialData?.current_mileage || undefined,
+    completed_date: initialData?.completed_date || '',
   });
 
   useEffect(() => {
@@ -28,6 +31,9 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
         status: initialData.status,
         cost: initialData.cost,
         description: initialData.description || '',
+        company: initialData.company ?? undefined,
+        current_mileage: initialData.current_mileage || undefined,
+        completed_date: initialData.completed_date || '',
       });
     } else {
       setFormData({
@@ -37,6 +43,9 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
         status: 'pending',
         cost: undefined,
         description: '',
+        company: undefined,
+        current_mileage: undefined,
+        completed_date: '',
       });
     }
   }, [initialData]);
@@ -45,7 +54,12 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'cost' ? (value ? parseFloat(value) : undefined) : value,
+      [name]:
+        name === 'cost' || name === 'current_mileage'
+          ? (value ? parseFloat(value) : undefined)
+          : name === 'company'
+            ? (value ? value : undefined)
+            : value,
     }));
   };
 
@@ -112,6 +126,38 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
             value={formData.cost || ''}
             onChange={handleChange}
             step="0.01"
+          />
+        </div>
+
+        <div>
+          <Input
+            label="Company"
+            type="text"
+            name="company"
+            value={formData.company ?? ''}
+            onChange={handleChange}
+            placeholder="Service provider or company"
+          />
+        </div>
+
+        <div>
+          <Input
+            label="Current Mileage"
+            type="number"
+            name="current_mileage"
+            value={formData.current_mileage || ''}
+            onChange={handleChange}
+            placeholder="Enter current mileage"
+          />
+        </div>
+
+        <div>
+          <Input
+            label="Completed Date"
+            type="date"
+            name="completed_date"
+            value={formData.completed_date || ''}
+            onChange={handleChange}
           />
         </div>
       </div>

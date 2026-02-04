@@ -66,6 +66,9 @@ export interface Maintenance {
   status: 'pending' | 'completed';
   cost?: number;
   description?: string;
+  completed_date?: string;
+  company?: 'Maynilad' | 'DNS' | 'Third Party';
+  current_mileage?: number;
   created_at?: string;
   updated_at?: string;
 }
