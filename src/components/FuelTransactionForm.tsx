@@ -142,22 +142,51 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
   // Camera functions
   const startCamera = async () => {
     try {
+      setShowCamera(true);
+      
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Camera API is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Edge.');
+        setShowCamera(false);
+        return;
+      }
+
+      // Request camera access with rear camera (environment)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
-          facingMode: 'environment', // Use rear camera
+          facingMode: 'environment',
           width: { ideal: 1920 },
           height: { ideal: 1080 }
-        }
+        },
+        audio: false
       });
-      
+
+      streamRef.current = stream;
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        streamRef.current = stream;
       }
-      setShowCamera(true);
-    } catch (error) {
-      console.error('Error accessing camera:', error);
-      alert('Unable to access camera. Please check permissions.');
+    } catch (error: any) {
+      console.error('Camera access error:', error);
+      
+      // Provide specific error messages based on error type
+      let errorMessage = 'Unable to access camera. ';
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage += 'Camera permission denied. Please allow camera access in your browser settings.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMessage += 'No camera device found. Please connect a camera and try again.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMessage += 'Camera is already in use by another application.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMessage += 'Camera settings are not supported on this device.';
+      } else if (error.name === 'SecurityError') {
+        errorMessage += 'Camera access blocked due to security settings. Please use HTTPS or localhost.';
+      } else {
+        errorMessage += error.message || 'Unknown error occurred.';
+      }
+      
+      alert(errorMessage);
+      setShowCamera(false);
     }
   };
 
@@ -169,20 +198,42 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
     setShowCamera(false);
   };
 
-  const captureImage = () => {
-    if (videoRef.current) {
+  const captureImage = async () => {
+    if (!videoRef.current || !streamRef.current) {
+      alert('Camera is not active');
+      return;
+    }
+
+    try {
+      // Create canvas to capture the frame
       const canvas = document.createElement('canvas');
-      canvas.width = videoRef.current.videoWidth;
-      canvas.height = videoRef.current.videoHeight;
-      const ctx = canvas.getContext('2d');
+      const video = videoRef.current;
       
-      if (ctx) {
-        ctx.drawImage(videoRef.current, 0, 0);
-        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-        setCapturedImage(imageDataUrl);
-        stopCamera();
-        uploadImageToStorage(imageDataUrl);
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      
+      const context = canvas.getContext('2d');
+      if (!context) {
+        alert('Failed to create canvas context');
+        return;
       }
+
+      // Draw the current video frame to canvas
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to base64 image
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      setCapturedImage(imageDataUrl);
+
+      // Stop camera
+      stopCamera();
+
+      // Upload the image to storage
+      await uploadImageToStorage(imageDataUrl);
+      
+    } catch (error) {
+      console.error('Failed to capture image:', error);
+      alert('Failed to capture image. Please try again.');
     }
   };
 
