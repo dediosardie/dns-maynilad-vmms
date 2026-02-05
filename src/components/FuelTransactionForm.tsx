@@ -88,7 +88,7 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
       setFormData({
         vehicle_id: initialData.vehicle_id,
         driver_id: initialData.driver_id,
-        transaction_date: initialData.transaction_date,
+        transaction_date: initialData.transaction_date.slice(0, 16),
         odometer_reading: initialData.odometer_reading,
         liters: initialData.liters,
         cost: initialData.cost,

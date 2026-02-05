@@ -48,6 +48,28 @@ maintenance-images/
 
 **Example:** `maintenance-images/2026/02/05/vehicle-456_1707152598123.jpg`
 
+### 3. Trip Images Bucket
+
+**Bucket Name:** `trip-images`
+
+**Purpose:** Store trip departure and arrival images for documentation
+
+**Settings:**
+- **Public bucket:** Yes (or configure RLS policies for controlled access)
+- **Allowed MIME types:** `image/jpeg`, `image/jpg`, `image/png`
+- **File size limit:** 5 MB (recommended)
+
+**Folder Structure:**
+```
+trip-images/
+  └── {year}/
+      └── {month}/
+          └── {day}/
+              └── {vehicleId}_{imageType}_{timestamp}.jpg
+```
+
+**Example:** `trip-images/2026/02/05/vehicle-789_departure_1707152712456.jpg`
+
 ## Setup Instructions
 
 ### Step 1: Create the Buckets
@@ -56,6 +78,7 @@ Navigate to your Supabase Dashboard → Storage → Create bucket
 
 1. Create **`fuel-receipts`** bucket with the settings described above
 2. Create **`maintenance-images`** bucket with the settings described above
+3. Create **`trip-images`** bucket with the settings described above
 
 ### Step 2: Storage Policies (Optional - for restricted access)
 
@@ -146,6 +169,14 @@ If accessing from different domains, configure CORS in Supabase Settings → API
 - **Auto-upload:** Images uploaded immediately after capture
 - **Field:** `image_url` in maintenance table
 
+#### TripForm (departure_image_url & arrival_image_url)
+- **Purpose:** Capture trip departure and arrival images for documentation
+- **Camera access:** Rear camera via `facingMode: 'environment'`
+- **Resolution:** 1920x1080 (ideal)
+- **Storage bucket:** `trip-images`
+- **Auto-upload:** Images uploaded immediately after capture
+- **Fields:** `departure_image_url` and `arrival_image_url` in trips table
+
 ### Common Features
 - **Rear camera access:** Uses `facingMode: 'environment'` to access device rear camera
 - **High quality:** Captures at 1920x1080 resolution (ideal)
@@ -174,7 +205,15 @@ Users must grant camera permissions when prompted. The feature requires:
 3. **Grant permissions:** Allow camera access when prompted
 4. **Capture image:** Click the red capture button
 5. **Verify upload:** Check Supabase Storage for the uploaded file in `fuel-receipts/{year}/{month}/{day}/`
-6. **Check URL:** Ensure `receipt_image_url` is populated in form data
+6. **Check URL:** Ensure `receipt_image_url` is populated in f
+
+### For TripForm (Trip Images)
+1. **Create bucket:** Set up `trip-images` bucket in Supabase Dashboard
+2. **Test camera access:** Open TripForm and click "Capture Departure" or "Capture Arrival"
+3. **Grant permissions:** Allow camera access when prompted
+4. **Capture images:** Click the respective capture buttons (blue for departure, green for arrival)
+5. **Verify upload:** Check Supabase Storage for the uploaded files in `trip-images/{year}/{month}/{day}/`
+6. **Check URLs:** Ensure `departure_image_url` and `arrival_image_url` are populated in form dataorm data
 
 ### For MaintenanceForm (Maintenance Images)
 1. **Create bucket:** Set up `maintenance-images` bucket in Supabase Dashboard

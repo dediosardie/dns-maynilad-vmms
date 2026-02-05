@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trip, Vehicle, Driver, Maintenance } from '../types';
 import { Input, Select, Textarea, Button } from './ui';
+import { supabase } from '../supabaseClient';
 
 interface AddressSuggestion {
   display_name: string;
@@ -31,8 +32,8 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
     distance_km: initialData?.distance_km || 0,
     estimated_fuel_consumption: initialData?.estimated_fuel_consumption || 0,
     route_waypoints: initialData?.route_waypoints,
-    notes: initialData?.notes,
-  });
+    notes: initialData?.notes,    departure_image_url: initialData?.departure_image_url,
+    arrival_image_url: initialData?.arrival_image_url,  });
 
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false);
   const [distanceError, setDistanceError] = useState<string | null>(null);
@@ -54,6 +55,14 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
   // Filter: only active vehicles per business rules
   const activeVehicles = vehicles.filter(v => v.status !== 'disposed');
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(activeVehicles);
+
+  // Camera capture states
+  const [capturing, setCapturing] = useState(false);
+  const [capturedDepartureImage, setCapturedDepartureImage] = useState<string | null>(null);
+  const [capturedArrivalImage, setCapturedArrivalImage] = useState<string | null>(null);
+  const [isUploadingDeparture, setIsUploadingDeparture] = useState(false);
+  const [isUploadingArrival, setIsUploadingArrival] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   // Get vehicle display text
   const getVehicleDisplay = (vehicleId: string) => {
@@ -89,6 +98,181 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
     setVehicleInputValue(displayText);
     setFormData(prev => ({ ...prev, vehicle_id: vehicle.id }));
     setShowVehicleSuggestions(false);
+  };
+
+  // Camera capture function (replicated from DriverAttendancePage)
+  const captureImage = async (imageType: 'departure' | 'arrival') => {
+    setCapturing(true);
+    setCameraError(null);
+
+    try {
+      // Check if getUserMedia is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError('Camera API is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Edge.');
+        setCapturing(false);
+        return;
+      }
+
+      // Request camera access - captures a single still image frame only
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment',
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      });
+
+      // Create temporary video element in memory
+      const video = document.createElement('video');
+      video.srcObject = mediaStream;
+      video.muted = true;
+      video.playsInline = true;
+
+      // Wait for video to be ready
+      await new Promise<void>((resolve) => {
+        video.onloadedmetadata = () => {
+          video.play();
+          resolve();
+        };
+      });
+
+      // Wait briefly for camera to adjust exposure
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Capture ONE single still frame to canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+
+      if (context) {
+        // Draw the single frame
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        // Convert to image data URL
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+
+        // Set captured image based on type
+        if (imageType === 'departure') {
+          setCapturedDepartureImage(imageDataUrl);
+          uploadImageToStorage(imageDataUrl, 'departure');
+        } else {
+          setCapturedArrivalImage(imageDataUrl);
+          uploadImageToStorage(imageDataUrl, 'arrival');
+        }
+      }
+
+      // IMMEDIATELY stop camera stream
+      mediaStream.getTracks().forEach(track => {
+        track.stop();
+        console.log('Camera track stopped');
+      });
+      
+    } catch (error: any) {
+      console.error('Camera access error:', error);
+      
+      // Provide specific error messages based on error type
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setCameraError('Camera permission denied. Please allow camera access in your browser settings.');
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        setCameraError('No camera device found. Please connect a camera and try again.');
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        setCameraError('Camera is already in use by another application.');
+      } else if (error.name === 'OverconstrainedError') {
+        setCameraError('Camera settings are not supported. Please check your device.');
+      } else if (error.name === 'SecurityError') {
+        setCameraError('Camera access blocked. Please ensure you are using HTTPS or localhost.');
+      } else {
+        setCameraError(`Unable to access camera: ${error.message || 'Unknown error'}`);
+      }
+    } finally {
+      setCapturing(false);
+    }
+  };
+
+  const uploadImageToStorage = async (imageDataUrl: string, imageType: 'departure' | 'arrival') => {
+    try {
+      if (imageType === 'departure') {
+        setIsUploadingDeparture(true);
+      } else {
+        setIsUploadingArrival(true);
+      }
+      
+      // Convert base64 to blob
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      
+      // Create structured path: trip-images/{year}/{month}/{day}/{vehicleId}_{imageType}_{timestamp}.jpg
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const timestamp = now.getTime();
+      const vehicleId = formData.vehicle_id || 'unknown';
+      const fileName = `${vehicleId}_${imageType}_${timestamp}.jpg`;
+      const filePath = `trip-images/${year}/${month}/${day}/${fileName}`;
+
+      console.log('📤 Uploading trip image:', filePath);
+
+      // Upload to Supabase Storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('trip-images')
+        .upload(filePath, blob, {
+          cacheControl: '31536000',
+          upsert: false,
+          contentType: 'image/jpeg',
+        });
+
+      if (uploadError) {
+        console.error('❌ Image upload error:', uploadError);
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
+      }
+
+      console.log('✅ Image uploaded successfully:', uploadData);
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('trip-images')
+        .getPublicUrl(filePath);
+
+      const imageUrl = urlData.publicUrl;
+      console.log('🔗 Image URL:', imageUrl);
+
+      // Update form data with the URL
+      if (imageType === 'departure') {
+        setFormData(prev => ({ ...prev, departure_image_url: imageUrl }));
+      } else {
+        setFormData(prev => ({ ...prev, arrival_image_url: imageUrl }));
+      }
+
+    } catch (error) {
+      console.error('❌ Image upload failed:', error);
+      setCameraError(`Failed to upload ${imageType} image. Please try again.`);
+      
+      // Clear the captured image on upload failure
+      if (imageType === 'departure') {
+        setCapturedDepartureImage(null);
+      } else {
+        setCapturedArrivalImage(null);
+      }
+    } finally {
+      if (imageType === 'departure') {
+        setIsUploadingDeparture(false);
+      } else {
+        setIsUploadingArrival(false);
+      }
+    }
+  };
+
+  const removeImage = (imageType: 'departure' | 'arrival') => {
+    if (imageType === 'departure') {
+      setCapturedDepartureImage(null);
+      setFormData(prev => ({ ...prev, departure_image_url: undefined }));
+    } else {
+      setCapturedArrivalImage(null);
+      setFormData(prev => ({ ...prev, arrival_image_url: undefined }));
+    }
   };
 
   // Helper function to format datetime for datetime-local input
@@ -273,11 +457,21 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
         estimated_fuel_consumption: initialData.estimated_fuel_consumption,
         route_waypoints: initialData.route_waypoints,
         notes: initialData.notes,
+        departure_image_url: initialData.departure_image_url,
+        arrival_image_url: initialData.arrival_image_url,
       });
       
       // Set vehicle input value for editing
       if (initialData.vehicle_id) {
         setVehicleInputValue(getVehicleDisplay(initialData.vehicle_id));
+      }
+
+      // Set captured images if URLs exist
+      if (initialData.departure_image_url) {
+        setCapturedDepartureImage(initialData.departure_image_url);
+      }
+      if (initialData.arrival_image_url) {
+        setCapturedArrivalImage(initialData.arrival_image_url);
       }
 
       // Parse and set coordinates from route_waypoints if available
@@ -311,6 +505,8 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
       setVehicleInputValue('');
       setShowVehicleSuggestions(false);
       setFilteredVehicles(activeVehicles);
+      setCapturedDepartureImage(null);
+      setCapturedArrivalImage(null);
     }
   }, [initialData, vehicles]);
 
@@ -663,6 +859,125 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
             min="0"
             step="0.1"
           />
+        </div>
+      </div>
+
+      {/* Camera Error Display */}
+      {cameraError && (
+        <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg">
+          <div className="flex items-start">
+            <svg className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <span className="text-sm">{cameraError}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Trip Images Section */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Departure Image */}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Departure Image
+          </label>
+          
+          {!capturedDepartureImage && (
+            <button
+              type="button"
+              onClick={() => captureImage('departure')}
+              disabled={capturing || isUploadingDeparture}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {capturing ? 'Capturing...' : 'Capture Departure'}
+            </button>
+          )}
+
+          {isUploadingDeparture && (
+            <div className="flex items-center gap-2 text-blue-600">
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-sm">Uploading...</span>
+            </div>
+          )}
+
+          {capturedDepartureImage && !isUploadingDeparture && (
+            <div className="relative">
+              <img
+                src={capturedDepartureImage}
+                alt="Departure"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600"
+              />
+              <button
+                type="button"
+                onClick={() => removeImage('departure')}
+                className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors shadow-lg"
+                title="Remove image"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Arrival Image */}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Arrival Image
+          </label>
+          
+          {!capturedArrivalImage && (
+            <button
+              type="button"
+              onClick={() => captureImage('arrival')}
+              disabled={capturing || isUploadingArrival}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {capturing ? 'Capturing...' : 'Capture Arrival'}
+            </button>
+          )}
+
+          {isUploadingArrival && (
+            <div className="flex items-center gap-2 text-green-600">
+              <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              <span className="text-sm">Uploading...</span>
+            </div>
+          )}
+
+          {capturedArrivalImage && !isUploadingArrival && (
+            <div className="relative">
+              <img
+                src={capturedArrivalImage}
+                alt="Arrival"
+                className="w-full rounded-lg border border-gray-300 dark:border-gray-600"
+              />
+              <button
+                type="button"
+                onClick={() => removeImage('arrival')}
+                className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors shadow-lg"
+                title="Remove image"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

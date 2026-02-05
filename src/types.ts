@@ -93,6 +93,8 @@ export interface Trip {
   tracking_enabled?: boolean;
   tracking_started_at?: string;
   tracking_stopped_at?: string;
+  departure_image_url?: string;
+  arrival_image_url?: string;
   created_at: string;
   updated_at: string;
 }
