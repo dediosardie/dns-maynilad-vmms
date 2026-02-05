@@ -72,6 +72,7 @@ export interface Maintenance {
   image_url?: string;
   created_at?: string;
   updated_at?: string;
+  lat_long?: string;
 }
 
 // Trip Scheduling Module - Defined per trip-scheduling-module.md
