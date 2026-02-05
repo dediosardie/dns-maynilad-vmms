@@ -143,8 +143,26 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // If there's a captured image that hasn't been uploaded yet, upload it first
+    if (capturedImage && capturedImage.startsWith('data:image')) {
+      setIsUploading(true);
+      try {
+        await uploadImageToStorage(capturedImage);
+      } catch (error) {
+        console.error('Failed to upload image:', error);
+        alert('Failed to upload image. Please try again.');
+        setIsUploading(false);
+        return; // Don't submit form if image upload fails
+      }
+      setIsUploading(false);
+      
+      // Wait a moment for formData to update with the image URL
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
     if (initialData && onUpdate) {
       onUpdate({ ...formData, id: initialData.id });
     } else {
@@ -267,15 +285,12 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
       // Draw the current video frame to canvas
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Convert canvas to base64 image
+      // Convert canvas to base64 image (store locally, don't upload yet)
       const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
       setCapturedImage(imageDataUrl);
 
       // Stop camera
       stopCamera();
-
-      // Upload the image to storage
-      await uploadImageToStorage(imageDataUrl);
       
     } catch (error) {
       console.error('Failed to capture image:', error);
@@ -283,63 +298,52 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     }
   };
 
-  const uploadImageToStorage = async (imageDataUrl: string) => {
-    try {
-      setIsUploading(true);
-      
-      // Convert base64 to blob
-      const response = await fetch(imageDataUrl);
-      const blob = await response.blob();
-      
-      // Create structured path: maintenance-images/{year}/{month}/{day}/{vehicleId}_{timestamp}.jpg
-      const now = new Date();
-      const year = now.getFullYear();
-      const month = String(now.getMonth() + 1).padStart(2, '0');
-      const day = String(now.getDate()).padStart(2, '0');
-      const timestamp = now.getTime();
-      const vehicleId = formData.vehicle_id || 'unknown';
-      const fileName = `${vehicleId}_${timestamp}.jpg`;
-      const filePath = `maintenance-images/${year}/${month}/${day}/${fileName}`;
+  const uploadImageToStorage = async (imageDataUrl: string): Promise<void> => {
+    // Convert base64 to blob
+    const response = await fetch(imageDataUrl);
+    const blob = await response.blob();
+    
+    // Create structured path: maintenance-images/{year}/{month}/{day}/{vehicleId}_{timestamp}.jpg
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const timestamp = now.getTime();
+    const vehicleId = formData.vehicle_id || 'unknown';
+    const fileName = `${vehicleId}_${timestamp}.jpg`;
+    const filePath = `maintenance-images/${year}/${month}/${day}/${fileName}`;
 
-      console.log('📤 Uploading maintenance image:', filePath);
+    console.log('📤 Uploading maintenance image:', filePath);
 
-      // Upload to Supabase Storage
-      const { error: uploadError, data: uploadData } = await supabase.storage
-        .from('maintenance-images')
-        .upload(filePath, blob, {
-          cacheControl: '31536000',
-          upsert: false,
-          contentType: 'image/jpeg',
-        });
+    // Upload to Supabase Storage
+    const { error: uploadError, data: uploadData } = await supabase.storage
+      .from('maintenance-images')
+      .upload(filePath, blob, {
+        cacheControl: '31536000',
+        upsert: false,
+        contentType: 'image/jpeg',
+      });
 
-      if (uploadError) {
-        console.error('❌ Image upload error:', uploadError);
-        throw new Error(`Failed to upload image: ${uploadError.message}`);
-      }
-
-      console.log('✅ Image uploaded successfully:', uploadData);
-
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('maintenance-images')
-        .getPublicUrl(filePath);
-
-      const imageUrl = urlData.publicUrl;
-      console.log('🔗 Image URL:', imageUrl);
-
-      // Update form data with the URL
-      setFormData(prev => ({
-        ...prev,
-        image_url: imageUrl
-      }));
-
-      setIsUploading(false);
-    } catch (error) {
-      console.error('❌ Image upload failed:', error);
-      alert('Failed to upload maintenance image. Please try again.');
-      setIsUploading(false);
-      setCapturedImage(null);
+    if (uploadError) {
+      console.error('❌ Image upload error:', uploadError);
+      throw new Error(`Failed to upload image: ${uploadError.message}`);
     }
+
+    console.log('✅ Image uploaded successfully:', uploadData);
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('maintenance-images')
+      .getPublicUrl(filePath);
+
+    const imageUrl = urlData.publicUrl;
+    console.log('🔗 Image URL:', imageUrl);
+
+    // Update form data with the URL
+    setFormData(prev => ({
+      ...prev,
+      image_url: imageUrl
+    }));
   };
 
   const removeImage = () => {
