@@ -20,7 +20,10 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
     description: initialData?.description || '',
     company: initialData?.company ?? undefined,
     current_mileage: initialData?.current_mileage || undefined,
-    completed_date: initialData?.completed_date || '',    image_url: initialData?.image_url || undefined,  });
+    completed_date: initialData?.completed_date || '',
+    image_url: initialData?.image_url || undefined,
+    lat_long: initialData?.lat_long || undefined,
+  });
 
   const [vehicleInputValue, setVehicleInputValue] = useState('');
   const [showVehicleSuggestions, setShowVehicleSuggestions] = useState(false);
@@ -32,6 +35,51 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
   const [isUploading, setIsUploading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Location state
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+
+  // Get current location
+  const getCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      console.error('Geolocation is not supported by this browser.');
+      return;
+    }
+
+    setIsLoadingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude.toFixed(6);
+        const long = position.coords.longitude.toFixed(6);
+        const latLong = `${lat}, ${long}`;
+        
+        setFormData(prev => ({
+          ...prev,
+          lat_long: latLong
+        }));
+        setIsLoadingLocation(false);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        setIsLoadingLocation(false);
+        
+        let errorMessage = 'Unable to get location. ';
+        if (error.code === error.PERMISSION_DENIED) {
+          errorMessage += 'Location permission denied. Please enable location access.';
+        } else if (error.code === error.POSITION_UNAVAILABLE) {
+          errorMessage += 'Location information unavailable.';
+        } else if (error.code === error.TIMEOUT) {
+          errorMessage += 'Location request timed out.';
+        }
+        alert(errorMessage);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      }
+    );
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -45,6 +93,8 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
         company: initialData.company ?? undefined,
         current_mileage: initialData.current_mileage || undefined,
         completed_date: initialData.completed_date || '',
+        image_url: initialData.image_url || undefined,
+        lat_long: initialData.lat_long || undefined,
       });
       
       // Set the display value for the vehicle input
@@ -70,9 +120,13 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
         current_mileage: undefined,
         completed_date: '',
         image_url: undefined,
+        lat_long: undefined,
       });
       setVehicleInputValue('');
       setCapturedImage(null);
+      
+      // Get current location for new forms
+      getCurrentLocation();
     }
   }, [initialData, vehicles]);
 
@@ -412,6 +466,19 @@ export default function MaintenanceForm({ onSchedule, onUpdate, vehicles, initia
             name="completed_date"
             value={formData.completed_date || ''}
             onChange={handleChange}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-secondary mb-2">
+            Location (Lat, Long)
+          </label>
+          <input
+            type="text"
+            name="lat_long"
+            value={isLoadingLocation ? 'Getting location...' : (formData.lat_long || 'Location not available')}
+            readOnly
+            className="w-full px-4 py-2.5 bg-bg-elevated border border-border-muted rounded-lg text-text-primary focus:outline-none cursor-not-allowed opacity-75"
           />
         </div>
       </div>
