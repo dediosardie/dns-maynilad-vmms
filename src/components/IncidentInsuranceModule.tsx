@@ -1,6 +1,6 @@
 // Incident & Insurance Module - Defined per incident-insurance-module.md
 // This module includes Incident and Insurance Claim management
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Incident, InsuranceClaim, Vehicle, Driver } from '../types';
 import Modal from './Modal';
 import { Input, Select, Textarea, Button, Badge, Card } from './ui';
@@ -88,6 +88,70 @@ export default function IncidentInsuranceModule() {
       status: initialData?.status || 'reported',
     });
 
+    const activeVehicles = vehicles.filter(v => v.status === 'active');
+    const [vehicleInputValue, setVehicleInputValue] = useState('');
+    const [showVehicleSuggestions, setShowVehicleSuggestions] = useState(false);
+    const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+    const vehicleRef = useRef<HTMLDivElement>(null);
+
+    // Get vehicle display text
+    const getVehicleDisplay = (vehicleId: string) => {
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      if (!vehicle) return '';
+      const identifier = vehicle.plate_number || vehicle.conduction_number || 'Unknown';
+      return `${identifier} - ${vehicle.make} ${vehicle.model}`;
+    };
+
+    // Handle vehicle input change with filtering
+    const handleVehicleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const inputValue = e.target.value;
+      setVehicleInputValue(inputValue);
+      
+      if (inputValue.length === 0) {
+        setFilteredVehicles(activeVehicles);
+        setShowVehicleSuggestions(false);
+        setFormData(prev => ({ ...prev, vehicle_id: '' }));
+        return;
+      }
+      
+      const filtered = activeVehicles.filter(vehicle => {
+        const identifier = vehicle.plate_number || vehicle.conduction_number || '';
+        const displayText = `${identifier} ${vehicle.make} ${vehicle.model}`.toLowerCase();
+        return displayText.includes(inputValue.toLowerCase());
+      });
+      
+      setFilteredVehicles(filtered);
+      setShowVehicleSuggestions(inputValue.length > 0 && filtered.length > 0);
+    };
+
+    // Handle vehicle selection from suggestions
+    const handleVehicleSelect = (vehicle: Vehicle) => {
+      const identifier = vehicle.plate_number || vehicle.conduction_number || 'Unknown';
+      const displayText = `${identifier} - ${vehicle.make} ${vehicle.model}`;
+      setVehicleInputValue(displayText);
+      setFormData(prev => ({ ...prev, vehicle_id: vehicle.id }));
+      setShowVehicleSuggestions(false);
+    };
+
+    // Set initial vehicle input value
+    useEffect(() => {
+      if (initialData?.vehicle_id) {
+        setVehicleInputValue(getVehicleDisplay(initialData.vehicle_id));
+      }
+    }, [initialData]);
+
+    // Close suggestions when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (vehicleRef.current && !vehicleRef.current.contains(event.target as Node)) {
+          setShowVehicleSuggestions(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       // Validation: min 50 characters for description per markdown
@@ -101,20 +165,63 @@ export default function IncidentInsuranceModule() {
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
-          {/* Vehicle (select, required, from active vehicles) */}
-          <div>
-            <Select
+          {/* Vehicle (autocomplete, required, from active vehicles) */}
+          <div style={{ position: 'relative' }} ref={vehicleRef}>
+            <Input
               label={<>Vehicle <span className="text-red-600">*</span></>}
-              name="vehicle_id"
-              value={formData.vehicle_id}
-              onChange={(e) => setFormData({...formData, vehicle_id: e.target.value})}
+              type="text"
+              name="vehicle_input"
+              value={vehicleInputValue}
+              onChange={handleVehicleInputChange}
+              onFocus={() => {
+                if (vehicleInputValue.length > 0 && filteredVehicles.length > 0) {
+                  setShowVehicleSuggestions(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowVehicleSuggestions(false), 200);
+              }}
               required
-            >
-              <option value="">Select Vehicle</option>
-              {vehicles.filter(v => v.status === 'active').map(v => (
-                <option key={v.id} value={v.id}>{v.plate_number} - {v.make} {v.model}</option>
-              ))}
-            </Select>
+              placeholder="Type to search vehicle..."
+            />
+            {showVehicleSuggestions && filteredVehicles.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#2d3748',
+                border: '1px solid #4a5568',
+                borderRadius: '4px',
+                maxHeight: '240px',
+                overflowY: 'auto',
+                zIndex: 50,
+                marginTop: '4px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+              }}>
+                {filteredVehicles.map((vehicle) => (
+                  <div
+                    key={vehicle.id}
+                    onClick={() => handleVehicleSelect(vehicle)}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #4a5568',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5568'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                      {vehicle.plate_number || vehicle.conduction_number || 'Unknown'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                      {vehicle.make} {vehicle.model}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Driver (select, required, from active drivers) */}

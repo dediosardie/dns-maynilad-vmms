@@ -1,5 +1,5 @@
 // Vehicle Disposal Module - Defined per vehicle-disposal-module.md
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { DisposalRequest, DisposalAuction, Bid, Vehicle } from '../types';
 import Modal from './Modal';
 import { Input, Select, Textarea, Button, Badge, Card } from './ui';
@@ -105,7 +105,57 @@ export default function VehicleDisposalModule() {
       current_mileage: initialData?.current_mileage || 0,
       estimated_value: initialData?.estimated_value || 0,
       request_date: initialData?.request_date || new Date().toISOString().split('T')[0],
+      justification: initialData?.justification || '',
     });
+
+    const [vehicleInputValue, setVehicleInputValue] = useState('');
+    const [showVehicleSuggestions, setShowVehicleSuggestions] = useState(false);
+    const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(vehicles);
+    const vehicleRef = useRef<HTMLDivElement>(null);
+
+    // Get vehicle display text
+    const getVehicleDisplay = (vehicleId: string) => {
+      const vehicle = vehicles.find(v => v.id === vehicleId);
+      if (!vehicle) return '';
+      const identifier = vehicle.plate_number || vehicle.conduction_number || 'Unknown';
+      return `${identifier} - ${vehicle.make} ${vehicle.model} (${vehicle.year})`;
+    };
+
+    // Update filtered vehicles when vehicles list changes
+    useEffect(() => {
+      setFilteredVehicles(vehicles);
+    }, [vehicles]);
+
+    // Handle vehicle input change with filtering
+    const handleVehicleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const inputValue = e.target.value;
+      setVehicleInputValue(inputValue);
+      
+      if (inputValue.length === 0) {
+        setFilteredVehicles(vehicles);
+        setShowVehicleSuggestions(false);
+        setFormData(prev => ({ ...prev, vehicle_id: '' }));
+        return;
+      }
+      
+      const filtered = vehicles.filter(vehicle => {
+        const identifier = vehicle.plate_number || vehicle.conduction_number || '';
+        const displayText = `${identifier} ${vehicle.make} ${vehicle.model} ${vehicle.year}`.toLowerCase();
+        return displayText.includes(inputValue.toLowerCase());
+      });
+      
+      setFilteredVehicles(filtered);
+      setShowVehicleSuggestions(inputValue.length > 0 && filtered.length > 0);
+    };
+
+    // Handle vehicle selection from suggestions
+    const handleVehicleSelect = (vehicle: Vehicle) => {
+      const identifier = vehicle.plate_number || vehicle.conduction_number || 'Unknown';
+      const displayText = `${identifier} - ${vehicle.make} ${vehicle.model} (${vehicle.year})`;
+      setVehicleInputValue(displayText);
+      setFormData(prev => ({ ...prev, vehicle_id: vehicle.id }));
+      setShowVehicleSuggestions(false);
+    };
 
     useEffect(() => {
       const getCurrentUser = () => {
@@ -115,6 +165,27 @@ export default function VehicleDisposalModule() {
         }
       };
       getCurrentUser();
+    }, []);
+
+    // Set initial vehicle input value when initialData changes
+    useEffect(() => {
+      if (initialData?.vehicle_id) {
+        setVehicleInputValue(getVehicleDisplay(initialData.vehicle_id));
+      } else {
+        setVehicleInputValue('');
+      }
+    }, [initialData, vehicles]);
+
+    // Close suggestions when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (vehicleRef.current && !vehicleRef.current.contains(event.target as Node)) {
+          setShowVehicleSuggestions(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -147,20 +218,63 @@ export default function VehicleDisposalModule() {
             />
           </div>
 
-          {/* Vehicle (select, required) */}
-          <div className="col-span-2">
-            <Select
+          {/* Vehicle (autocomplete, required) */}
+          <div className="col-span-2" style={{ position: 'relative' }} ref={vehicleRef}>
+            <Input
               label={<>Vehicle <span className="text-red-600">*</span></>}
-              name="vehicle_id"
-              value={formData.vehicle_id}
-              onChange={(e) => setFormData({...formData, vehicle_id: e.target.value})}
+              type="text"
+              name="vehicle_input"
+              value={vehicleInputValue}
+              onChange={handleVehicleInputChange}
+              onFocus={() => {
+                if (filteredVehicles.length > 0) {
+                  setShowVehicleSuggestions(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowVehicleSuggestions(false), 200);
+              }}
               required
-            >
-              <option value="">Select Vehicle</option>
-              {vehicles.map(v => (
-                <option key={v.id} value={v.id}>{v.plate_number}{v.conduction_number ? ` (${v.conduction_number})` : ''} - {v.make} {v.model} ({v.year})</option>
-              ))}
-            </Select>
+              placeholder="Type to search vehicle..."
+            />
+            {showVehicleSuggestions && filteredVehicles.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#2d3748',
+                border: '1px solid #4a5568',
+                borderRadius: '4px',
+                maxHeight: '240px',
+                overflowY: 'auto',
+                zIndex: 50,
+                marginTop: '4px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+              }}>
+                {filteredVehicles.map((vehicle) => (
+                  <div
+                    key={vehicle.id}
+                    onClick={() => handleVehicleSelect(vehicle)}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #4a5568',
+                      transition: 'background-color 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5568'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                  >
+                    <div style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                      {vehicle.plate_number || vehicle.conduction_number || 'Unknown'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                      {vehicle.make} {vehicle.model} ({vehicle.year})
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Reason for Disposal (select, required) */}
@@ -252,6 +366,20 @@ export default function VehicleDisposalModule() {
               required
             />
           </div>
+        </div>
+
+        {/* Justification (textarea, required) */}
+        <div>
+          <Textarea
+            label={<>Justification for Disposal <span className="text-red-600">*</span></>}
+            name="justification"
+            value={formData.justification}
+            onChange={(e) => setFormData({...formData, justification: e.target.value})}
+            required
+            rows={4}
+            placeholder="Provide detailed justification for this disposal request..."
+          />
+          <p className="text-xs text-text-muted mt-1">Please explain why this vehicle should be disposed and provide any relevant details.</p>
         </div>
 
         {/* Approval/Rejection Information (read-only, only shown if exists) */}

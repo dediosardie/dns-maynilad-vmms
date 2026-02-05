@@ -69,6 +69,7 @@ export interface Maintenance {
   completed_date?: string;
   company?: 'Maynilad' | 'DNS' | 'Third Party';
   current_mileage?: number;
+  image_url?: string;
   created_at?: string;
   updated_at?: string;
 }

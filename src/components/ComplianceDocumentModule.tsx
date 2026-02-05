@@ -1,5 +1,5 @@
 // Compliance Document Module - Defined per compliance-document-module.md
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Document, ComplianceAlert, Vehicle, Driver } from '../types';
 import Modal from './Modal';
 import { Input, Select, Textarea, Button, Badge, Card } from './ui';
@@ -61,6 +61,85 @@ export default function ComplianceDocumentModule() {
       notes: initialData?.notes || '',
     });
 
+    const [entityInputValue, setEntityInputValue] = useState('');
+    const [showEntitySuggestions, setShowEntitySuggestions] = useState(false);
+    const [filteredEntities, setFilteredEntities] = useState<(Vehicle | Driver)[]>([]);
+    const entityRef = useRef<HTMLDivElement>(null);
+
+    // Get entity display text
+    const getEntityDisplay = (entityId: string, entityType: string) => {
+      const entities = entityType === 'vehicle' ? vehicles : drivers;
+      const entity = entities.find(e => e.id === entityId);
+      if (!entity) return '';
+      if ('plate_number' in entity) {
+        const identifier = entity.plate_number || entity.conduction_number || 'Unknown';
+        return `${identifier} - ${entity.make} ${entity.model}`;
+      }
+      return entity.full_name;
+    };
+
+    // Handle entity input change with filtering
+    const handleEntityInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const inputValue = e.target.value;
+      setEntityInputValue(inputValue);
+      
+      if (inputValue.length === 0) {
+        setFilteredEntities(availableEntities);
+        setShowEntitySuggestions(false);
+        setFormData(prev => ({ ...prev, related_entity_id: '' }));
+        return;
+      }
+      
+      const filtered = availableEntities.filter(entity => {
+        if ('plate_number' in entity) {
+          const identifier = entity.plate_number || entity.conduction_number || '';
+          const displayText = `${identifier} ${entity.make} ${entity.model}`.toLowerCase();
+          return displayText.includes(inputValue.toLowerCase());
+        } else {
+          return entity.full_name.toLowerCase().includes(inputValue.toLowerCase());
+        }
+      });
+      
+      setFilteredEntities(filtered);
+      setShowEntitySuggestions(inputValue.length > 0 && filtered.length > 0);
+    };
+
+    // Handle entity selection from suggestions
+    const handleEntitySelect = (entity: Vehicle | Driver) => {
+      const displayText = getEntityDisplay(entity.id, formData.related_entity_type);
+      setEntityInputValue(displayText);
+      setFormData(prev => ({ ...prev, related_entity_id: entity.id }));
+      setShowEntitySuggestions(false);
+    };
+
+    // Set initial entity input value
+    useEffect(() => {
+      if (initialData?.related_entity_id) {
+        setEntityInputValue(getEntityDisplay(initialData.related_entity_id, initialData.related_entity_type));
+      } else {
+        setEntityInputValue('');
+      }
+    }, [initialData]);
+
+    // Update entity input when entity type changes
+    useEffect(() => {
+      setEntityInputValue('');
+      setFormData(prev => ({ ...prev, related_entity_id: '' }));
+      setFilteredEntities(availableEntities);
+    }, [formData.related_entity_type]);
+
+    // Close suggestions when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (entityRef.current && !entityRef.current.contains(event.target as Node)) {
+          setShowEntitySuggestions(false);
+        }
+      };
+
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault();
       onSubmit(formData);
@@ -106,24 +185,74 @@ export default function ComplianceDocumentModule() {
             </Select>
           </div>
 
-          {/* Select Vehicle/Driver (select, required, dynamic based on previous selection) */}
-          <div>
-            <Select
+          {/* Select Vehicle/Driver (autocomplete, required, dynamic based on previous selection) */}
+          <div style={{ position: 'relative' }} ref={entityRef}>
+            <Input
               label={<>Select {formData.related_entity_type === 'vehicle' ? 'Vehicle' : 'Driver'} <span className="text-red-600">*</span></>}
-              name="related_entity_id"
-              value={formData.related_entity_id}
-              onChange={(e) => setFormData({...formData, related_entity_id: e.target.value})}
+              type="text"
+              name="entity_input"
+              value={entityInputValue}
+              onChange={handleEntityInputChange}
+              onFocus={() => {
+                if (entityInputValue.length > 0 && filteredEntities.length > 0) {
+                  setShowEntitySuggestions(true);
+                }
+              }}
+              onBlur={() => {
+                setTimeout(() => setShowEntitySuggestions(false), 200);
+              }}
               required
-            >
-              <option value="">Select {formData.related_entity_type}</option>
-              {availableEntities.map(entity => (
-                <option key={entity.id} value={entity.id}>
-                  {'plate_number' in entity 
-                    ? `${entity.plate_number}${entity.conduction_number ? ` (${entity.conduction_number})` : ''} - ${entity.make} ${entity.model}` 
-                    : entity.full_name}
-                </option>
-              ))}
-            </Select>
+              placeholder={`Type to search ${formData.related_entity_type}...`}
+            />
+            {showEntitySuggestions && filteredEntities.length > 0 && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                right: 0,
+                backgroundColor: '#2d3748',
+                border: '1px solid #4a5568',
+                borderRadius: '4px',
+                maxHeight: '240px',
+                overflowY: 'auto',
+                zIndex: 50,
+                marginTop: '4px',
+                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+              }}>
+                {filteredEntities.map((entity) => {
+                  const isVehicle = 'plate_number' in entity;
+                  return (
+                    <div
+                      key={entity.id}
+                      onClick={() => handleEntitySelect(entity)}
+                      style={{
+                        padding: '8px 12px',
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #4a5568',
+                        transition: 'background-color 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5568'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      {isVehicle ? (
+                        <>
+                          <div style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                            {entity.plate_number || entity.conduction_number || 'Unknown'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                            {entity.make} {entity.model}
+                          </div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                          {entity.full_name}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           {/* Document Name (text, required) */}

@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Vehicle } from '../types';
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Button, Input, Select } from './ui';
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell, Badge, Button, Input, Select, Textarea } from './ui';
 import Modal from './Modal';
 
 interface VehicleTableProps {
   vehicles: Vehicle[];
-  onDispose: (vehicleId: string, disposalReason: string, currentMileage: number) => void;
+  onDispose: (vehicleId: string, disposalReason: string, currentMileage: number, justification: string) => void;
   onEdit: (vehicle: Vehicle) => void;
   onDelete: (vehicleId: string) => void;
 }
@@ -15,18 +15,20 @@ export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: 
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [disposalReason, setDisposalReason] = useState<string>('end_of_life');
   const [currentMileage, setCurrentMileage] = useState<number>(0);
+  const [justification, setJustification] = useState<string>('');
 
   const handleDispose = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
     setDisposalReason('end_of_life');
     setCurrentMileage(0);
+    setJustification('');
     setIsDisposalModalOpen(true);
   };
 
   const handleSubmitDisposal = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedVehicle) {
-      onDispose(selectedVehicle.id, disposalReason, currentMileage);
+      onDispose(selectedVehicle.id, disposalReason, currentMileage, justification);
       setIsDisposalModalOpen(false);
       setSelectedVehicle(null);
     }
@@ -212,6 +214,18 @@ export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: 
             min="0"
             step="1"
           />
+        </div>
+
+        <div>
+          <Textarea
+            label={<>Justification for Disposal <span className="text-red-600">*</span></>}
+            value={justification}
+            onChange={(e) => setJustification(e.target.value)}
+            required
+            rows={4}
+            placeholder="Provide detailed justification for disposing this vehicle..."
+          />
+          <p className="text-xs text-text-muted mt-1">Please explain why this vehicle should be disposed and provide any relevant details.</p>
         </div>
 
         <div className="flex justify-end gap-3 pt-4">

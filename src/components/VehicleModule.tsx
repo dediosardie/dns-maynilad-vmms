@@ -222,7 +222,7 @@ export default function VehicleModule() {
     }
   };
 
-  const handleDisposeVehicle = async (vehicleId: string, disposalReason: string, currentMileage: number) => {
+  const handleDisposeVehicle = async (vehicleId: string, disposalReason: string, currentMileage: number, justification: string) => {
     const vehicle = vehicles.find(v => v.id === vehicleId);
     if (!vehicle) {
       notificationService.error('Error', 'Vehicle not found');
@@ -237,7 +237,7 @@ export default function VehicleModule() {
         return;
       }
 
-      // Create disposal request
+      // Create disposal request with all required fields
       const disposalRequest = {
         disposal_number: `DSP-${Date.now()}`,
         vehicle_id: vehicleId,
@@ -248,6 +248,7 @@ export default function VehicleModule() {
         current_mileage: currentMileage,
         estimated_value: 0, // To be estimated by fleet manager
         request_date: new Date().toISOString().split('T')[0],
+        justification: justification,
         status: 'pending_approval' as 'pending_approval' | 'listed' | 'bidding_open' | 'sold' | 'transferred' | 'cancelled',
         approval_status: 'pending' as 'pending' | 'approved' | 'rejected',
       };

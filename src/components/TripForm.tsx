@@ -45,11 +45,64 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
   const [showDestinationSuggestions, setShowDestinationSuggestions] = useState(false);
   const [originCoords, setOriginCoords] = useState<{lat: number, lon: number} | null>(null);
   const [destinationCoords, setDestinationCoords] = useState<{lat: number, lon: number} | null>(null);
+  const [vehicleInputValue, setVehicleInputValue] = useState('');
+  const [showVehicleSuggestions, setShowVehicleSuggestions] = useState(false);
   const originRef = useRef<HTMLDivElement>(null);
   const destinationRef = useRef<HTMLDivElement>(null);
+  const vehicleRef = useRef<HTMLDivElement>(null);
 
   // Filter: only active vehicles per business rules
   const activeVehicles = vehicles.filter(v => v.status !== 'disposed');
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>(activeVehicles);
+
+  // Get vehicle display text
+  const getVehicleDisplay = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return '';
+    return `${vehicle.plate_number || vehicle.conduction_number} - ${vehicle.make} ${vehicle.model}`;
+  };
+
+  // Handle vehicle input change with filtering
+  const handleVehicleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setVehicleInputValue(inputValue);
+    
+    if (inputValue.length === 0) {
+      setFilteredVehicles(activeVehicles);
+      setShowVehicleSuggestions(false);
+      setFormData(prev => ({ ...prev, vehicle_id: '' }));
+      return;
+    }
+    
+    const filtered = activeVehicles.filter(vehicle => {
+      const displayText = `${vehicle.plate_number || vehicle.conduction_number} ${vehicle.make} ${vehicle.model}`.toLowerCase();
+      return displayText.includes(inputValue.toLowerCase());
+    });
+    
+    setFilteredVehicles(filtered);
+    setShowVehicleSuggestions(inputValue.length > 0 && filtered.length > 0);
+  };
+
+  // Handle vehicle selection from suggestions
+  const handleVehicleSelect = (vehicle: Vehicle) => {
+    const displayText = `${vehicle.plate_number || vehicle.conduction_number} - ${vehicle.make} ${vehicle.model}`;
+    setVehicleInputValue(displayText);
+    setFormData(prev => ({ ...prev, vehicle_id: vehicle.id }));
+    setShowVehicleSuggestions(false);
+  };
+
+  // Helper function to format datetime for datetime-local input
+  const formatDateTimeLocal = (dateString: string | undefined) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Format: YYYY-MM-DDTHH:MM (required for datetime-local input)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  };
 
   // Search addresses using Nominatim (OpenStreetMap)
   const searchAddress = async (query: string, isOrigin: boolean) => {
@@ -172,6 +225,9 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
       if (destinationRef.current && !destinationRef.current.contains(event.target as Node)) {
         setShowDestinationSuggestions(false);
       }
+      if (vehicleRef.current && !vehicleRef.current.contains(event.target as Node)) {
+        setShowVehicleSuggestions(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -208,8 +264,8 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
         driver_id: initialData.driver_id,
         origin: initialData.origin,
         destination: initialData.destination,
-        planned_departure: initialData.planned_departure,
-        planned_arrival: initialData.planned_arrival,
+        planned_departure: formatDateTimeLocal(initialData.planned_departure),
+        planned_arrival: formatDateTimeLocal(initialData.planned_arrival),
         actual_departure: initialData.actual_departure,
         actual_arrival: initialData.actual_arrival,
         status: initialData.status,
@@ -218,8 +274,45 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
         route_waypoints: initialData.route_waypoints,
         notes: initialData.notes,
       });
+      
+      // Set vehicle input value for editing
+      if (initialData.vehicle_id) {
+        setVehicleInputValue(getVehicleDisplay(initialData.vehicle_id));
+      }
+
+      // Parse and set coordinates from route_waypoints if available
+      if (initialData.route_waypoints) {
+        try {
+          const waypoints = JSON.parse(initialData.route_waypoints);
+          if (waypoints.origin) {
+            setOriginCoords({ lat: waypoints.origin.lat, lon: waypoints.origin.lon });
+          }
+          if (waypoints.destination) {
+            setDestinationCoords({ lat: waypoints.destination.lat, lon: waypoints.destination.lon });
+          }
+        } catch (error) {
+          console.error('Error parsing route waypoints:', error);
+        }
+      }
+
+      // Clear suggestions when editing existing trip
+      setShowOriginSuggestions(false);
+      setShowDestinationSuggestions(false);
+      setOriginSuggestions([]);
+      setDestinationSuggestions([]);
+    } else {
+      // Reset all states when creating new trip
+      setOriginCoords(null);
+      setDestinationCoords(null);
+      setEstimatedDuration('');
+      setRouteInstructions([]);
+      setShowOriginSuggestions(false);
+      setShowDestinationSuggestions(false);
+      setVehicleInputValue('');
+      setShowVehicleSuggestions(false);
+      setFilteredVehicles(activeVehicles);
     }
-  }, [initialData]);
+  }, [initialData, vehicles]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -265,15 +358,26 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
       return;
     }
 
+    // Store coordinates in route_waypoints for future editing
+    const waypointsData = {
+      origin: originCoords,
+      destination: destinationCoords
+    };
+
+    const submitData = {
+      ...formData,
+      route_waypoints: JSON.stringify(waypointsData)
+    };
+
     if (initialData && onUpdate) {
       onUpdate({ 
-        ...formData, 
+        ...submitData, 
         id: initialData.id,
         created_at: initialData.created_at,
         updated_at: new Date().toISOString()
       });
     } else {
-      onSave(formData);
+      onSave(submitData);
     }
   };
 
@@ -290,22 +394,63 @@ export default function TripForm({ onSave, onUpdate, initialData, vehicles, driv
         </div>
       )}
       <div className="grid grid-cols-2 gap-6">
-        {/* Vehicle (select, required, from active vehicles) */}
-        <div>
-          <Select
+        {/* Vehicle (autocomplete, required, from active vehicles) */}
+        <div style={{ position: 'relative' }} ref={vehicleRef}>
+          <Input
             label={<>Vehicle <span className="text-red-600">*</span></>}
-            name="vehicle_id"
-            value={formData.vehicle_id}
-            onChange={handleChange}
+            type="text"
+            name="vehicle_input"
+            value={vehicleInputValue}
+            onChange={handleVehicleInputChange}
+            onFocus={() => {
+              if (vehicleInputValue.length > 0 && filteredVehicles.length > 0) {
+                setShowVehicleSuggestions(true);
+              }
+            }}
+            onBlur={() => {
+              setTimeout(() => setShowVehicleSuggestions(false), 200);
+            }}
             required
-          >
-            <option value="">Select Vehicle</option>
-            {activeVehicles.map(vehicle => (
-              <option key={vehicle.id} value={vehicle.id}>
-                {vehicle.plate_number || vehicle.conduction_number} - {vehicle.make} {vehicle.model}
-              </option>
-            ))}
-          </Select>
+            placeholder="Type to search vehicle..."
+          />
+          {showVehicleSuggestions && filteredVehicles.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              backgroundColor: '#2d3748',
+              border: '1px solid #4a5568',
+              borderRadius: '4px',
+              maxHeight: '240px',
+              overflowY: 'auto',
+              zIndex: 50,
+              marginTop: '4px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+            }}>
+              {filteredVehicles.map((vehicle) => (
+                <div
+                  key={vehicle.id}
+                  onClick={() => handleVehicleSelect(vehicle)}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #4a5568',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5568'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                    {vehicle.plate_number || vehicle.conduction_number}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                    {vehicle.make} {vehicle.model}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Driver (select, required, from available drivers) */}

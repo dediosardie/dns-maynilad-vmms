@@ -1,7 +1,8 @@
 // Fuel Transaction Form Component - Defined per fuel-tracking-module.md
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FuelTransaction, Vehicle, Driver } from '../types';
 import { Input, Select } from './ui';
+import { supabase } from '../supabaseClient';
 
 interface FuelTransactionFormProps {
   onSave: (transaction: Omit<FuelTransaction, 'id' | 'created_at'>) => void;
@@ -27,9 +28,60 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
     is_full_tank: initialData?.is_full_tank ?? true,
   });
 
+  const [vehicleInputValue, setVehicleInputValue] = useState('');
+  const [showVehicleSuggestions, setShowVehicleSuggestions] = useState(false);
+  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([]);
+  const vehicleRef = useRef<HTMLDivElement>(null);
+
+  // Camera capture states
+  const [showCamera, setShowCamera] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
   // Filter active vehicles per business rules
   const activeVehicles = vehicles.filter(v => v.status === 'active');
   const activeDrivers = drivers.filter(d => d.status === 'active');
+
+  // Get vehicle display text
+  const getVehicleDisplay = (vehicleId: string) => {
+    const vehicle = vehicles.find(v => v.id === vehicleId);
+    if (!vehicle) return '';
+    const identifier = vehicle.plate_number || vehicle.conduction_number || 'Unknown';
+    return `${identifier} - ${vehicle.make} ${vehicle.model}`;
+  };
+
+  // Handle vehicle input change with filtering
+  const handleVehicleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = e.target.value;
+    setVehicleInputValue(inputValue);
+    
+    if (inputValue.length === 0) {
+      setFilteredVehicles(activeVehicles);
+      setShowVehicleSuggestions(false);
+      setFormData(prev => ({ ...prev, vehicle_id: '' }));
+      return;
+    }
+    
+    const filtered = activeVehicles.filter(vehicle => {
+      const identifier = vehicle.plate_number || vehicle.conduction_number || '';
+      const displayText = `${identifier} ${vehicle.make} ${vehicle.model}`.toLowerCase();
+      return displayText.includes(inputValue.toLowerCase());
+    });
+    
+    setFilteredVehicles(filtered);
+    setShowVehicleSuggestions(inputValue.length > 0 && filtered.length > 0);
+  };
+
+  // Handle vehicle selection from suggestions
+  const handleVehicleSelect = (vehicle: Vehicle) => {
+    const identifier = vehicle.plate_number || vehicle.conduction_number || 'Unknown';
+    const displayText = `${identifier} - ${vehicle.make} ${vehicle.model}`;
+    setVehicleInputValue(displayText);
+    setFormData(prev => ({ ...prev, vehicle_id: vehicle.id }));
+    setShowVehicleSuggestions(false);
+  };
 
   useEffect(() => {
     if (initialData) {
@@ -47,8 +99,35 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
         receipt_image_url: initialData.receipt_image_url,
         is_full_tank: initialData.is_full_tank,
       });
+      
+      // Set vehicle input value for editing
+      if (initialData.vehicle_id) {
+        setVehicleInputValue(getVehicleDisplay(initialData.vehicle_id));
+      }
+      
+      // Set captured image if receipt URL exists
+      if (initialData.receipt_image_url) {
+        setCapturedImage(initialData.receipt_image_url);
+      }
+    } else {
+      setVehicleInputValue('');
+      setShowVehicleSuggestions(false);
+      setFilteredVehicles(activeVehicles);
+      setCapturedImage(null);
     }
-  }, [initialData]);
+  }, [initialData, vehicles]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (vehicleRef.current && !vehicleRef.current.contains(event.target as Node)) {
+        setShowVehicleSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Auto-calculate cost_per_liter when cost or liters change
   useEffect(() => {
@@ -59,6 +138,129 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
       }));
     }
   }, [formData.cost, formData.liters]);
+
+  // Camera functions
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: 'environment', // Use rear camera
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+      }
+      setShowCamera(true);
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access camera. Please check permissions.');
+    }
+  };
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowCamera(false);
+  };
+
+  const captureImage = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = videoRef.current.videoWidth;
+      canvas.height = videoRef.current.videoHeight;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0);
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        setCapturedImage(imageDataUrl);
+        stopCamera();
+        uploadImageToStorage(imageDataUrl);
+      }
+    }
+  };
+
+  const uploadImageToStorage = async (imageDataUrl: string) => {
+    try {
+      setIsUploading(true);
+      
+      // Convert base64 to blob
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      
+      // Create structured path: fuel-receipts/{year}/{month}/{day}/{vehicleId}_{timestamp}.jpg
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const timestamp = now.getTime();
+      const vehicleId = formData.vehicle_id || 'unknown';
+      const fileName = `${vehicleId}_${timestamp}.jpg`;
+      const filePath = `fuel-receipts/${year}/${month}/${day}/${fileName}`;
+
+      console.log('📤 Uploading receipt image:', filePath);
+
+      // Upload to Supabase Storage
+      const { error: uploadError, data: uploadData } = await supabase.storage
+        .from('fuel-receipts')
+        .upload(filePath, blob, {
+          cacheControl: '31536000',
+          upsert: false,
+          contentType: 'image/jpeg',
+        });
+
+      if (uploadError) {
+        console.error('❌ Image upload error:', uploadError);
+        throw new Error(`Failed to upload image: ${uploadError.message}`);
+      }
+
+      console.log('✅ Image uploaded successfully:', uploadData);
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('fuel-receipts')
+        .getPublicUrl(filePath);
+
+      const imageUrl = urlData.publicUrl;
+      console.log('🔗 Image URL:', imageUrl);
+
+      // Update form data with the URL
+      setFormData(prev => ({
+        ...prev,
+        receipt_image_url: imageUrl
+      }));
+
+      setIsUploading(false);
+    } catch (error) {
+      console.error('❌ Image upload failed:', error);
+      alert('Failed to upload receipt image. Please try again.');
+      setIsUploading(false);
+      setCapturedImage(null);
+    }
+  };
+
+  const removeImage = () => {
+    setCapturedImage(null);
+    setFormData(prev => ({
+      ...prev,
+      receipt_image_url: undefined
+    }));
+  };
+
+  // Cleanup camera on unmount
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -89,22 +291,63 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-2 gap-6">
-        {/* Vehicle (select, required, from active vehicles) */}
-        <div>
-          <Select
+        {/* Vehicle (autocomplete, required, from active vehicles) */}
+        <div style={{ position: 'relative' }} ref={vehicleRef}>
+          <Input
             label={<>Vehicle <span className="text-red-600">*</span></>}
-            name="vehicle_id"
-            value={formData.vehicle_id}
-            onChange={handleChange}
+            type="text"
+            name="vehicle_input"
+            value={vehicleInputValue}
+            onChange={handleVehicleInputChange}
+            onFocus={() => {
+              if (vehicleInputValue.length > 0 && filteredVehicles.length > 0) {
+                setShowVehicleSuggestions(true);
+              }
+            }}
+            onBlur={() => {
+              setTimeout(() => setShowVehicleSuggestions(false), 200);
+            }}
             required
-          >
-            <option value="">Select vehicle</option>
-            {activeVehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.plate_number}{v.conduction_number ? ` (${v.conduction_number})` : ''}
-              </option>
-            ))}
-          </Select>
+            placeholder="Type to search vehicle..."
+          />
+          {showVehicleSuggestions && filteredVehicles.length > 0 && (
+            <div style={{
+              position: 'absolute',
+              top: '100%',
+              left: 0,
+              right: 0,
+              backgroundColor: '#2d3748',
+              border: '1px solid #4a5568',
+              borderRadius: '4px',
+              maxHeight: '240px',
+              overflowY: 'auto',
+              zIndex: 50,
+              marginTop: '4px',
+              boxShadow: '0 4px 6px rgba(0, 0, 0, 0.3)'
+            }}>
+              {filteredVehicles.map((vehicle) => (
+                <div
+                  key={vehicle.id}
+                  onClick={() => handleVehicleSelect(vehicle)}
+                  style={{
+                    padding: '8px 12px',
+                    cursor: 'pointer',
+                    borderBottom: '1px solid #4a5568',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#4a5568'}
+                  onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                >
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: '#e2e8f0' }}>
+                    {vehicle.plate_number || vehicle.conduction_number || 'Unknown'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#a0aec0', marginTop: '2px' }}>
+                    {vehicle.make} {vehicle.model}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Driver (select, required, from active drivers) */}
@@ -234,6 +477,87 @@ export default function FuelTransactionForm({ onSave, onUpdate, initialData, veh
             onChange={handleChange}
           />
         </div>
+      </div>
+
+      {/* Receipt Image Upload with Camera */}
+      <div className="space-y-3">
+        <label className="block text-sm font-medium text-slate-700">
+          Receipt Image
+        </label>
+        
+        {!capturedImage && !showCamera && (
+          <button
+            type="button"
+            onClick={startCamera}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Capture Receipt
+          </button>
+        )}
+
+        {showCamera && (
+          <div className="relative bg-black rounded-lg overflow-hidden">
+            <video
+              ref={videoRef}
+              autoPlay
+              playsInline
+              className="w-full h-auto"
+              style={{ maxHeight: '400px' }}
+            />
+            <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4">
+              <button
+                type="button"
+                onClick={captureImage}
+                className="px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors shadow-lg"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <circle cx="12" cy="12" r="10" strokeWidth={2} />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={stopCamera}
+                className="px-4 py-3 bg-gray-600 text-white rounded-full hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors shadow-lg"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {isUploading && (
+          <div className="flex items-center gap-2 text-blue-600">
+            <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span>Uploading receipt...</span>
+          </div>
+        )}
+
+        {capturedImage && !isUploading && (
+          <div className="relative">
+            <img
+              src={capturedImage}
+              alt="Receipt"
+              className="w-full max-w-md rounded-lg border border-slate-300"
+            />
+            <button
+              type="button"
+              onClick={removeImage}
+              className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors shadow-lg"
+              title="Remove image"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Full Tank (checkbox, default: true) */}
