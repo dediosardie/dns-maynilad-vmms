@@ -12,6 +12,7 @@ export interface Vehicle {
   fuel_capacity?: number;
   ownership_type: 'Internal' | 'Leased'  | 'Leased to Own'| 'Shuttle';
   status: 'active' | 'maintenance' | 'disposed';
+  insurance_policy_number?: string;
   insurance_expiry: string;
   registration_expiry: string;
   created_at?: string;

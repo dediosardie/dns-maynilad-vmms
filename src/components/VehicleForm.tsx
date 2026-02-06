@@ -22,6 +22,7 @@ export default function VehicleForm({ onSave, onUpdate, initialData, viewOnly = 
     fuel_capacity: initialData?.fuel_capacity || undefined,
     ownership_type: initialData?.ownership_type || 'Internal',
     status: initialData?.status || 'active',
+    insurance_policy_number: initialData?.insurance_policy_number || '',
     insurance_expiry: initialData?.insurance_expiry || '',
     registration_expiry: initialData?.registration_expiry || '',
   });
@@ -40,6 +41,7 @@ export default function VehicleForm({ onSave, onUpdate, initialData, viewOnly = 
         fuel_capacity: initialData.fuel_capacity || undefined,
         ownership_type: initialData.ownership_type,
         status: initialData.status,
+        insurance_policy_number: initialData.insurance_policy_number || '',
         insurance_expiry: initialData.insurance_expiry,
         registration_expiry: initialData.registration_expiry,
       });
@@ -56,6 +58,7 @@ export default function VehicleForm({ onSave, onUpdate, initialData, viewOnly = 
         fuel_capacity: undefined,
         ownership_type: 'Internal',
         status: 'active',
+        insurance_policy_number: '',
         insurance_expiry: '',
         registration_expiry: '',
       });
@@ -272,6 +275,16 @@ export default function VehicleForm({ onSave, onUpdate, initialData, viewOnly = 
             { value: 'maintenance', label: 'maintenance' },
             { value: 'disposed', label: 'disposed' }
           ]}
+          disabled={viewOnly}
+        />
+
+        <Input
+          label="Insurance Policy Number"
+          type="text"
+          name="insurance_policy_number"
+          value={formData.insurance_policy_number || ''}
+          onChange={handleChange}
+          placeholder="e.g., POL-123456789"
           disabled={viewOnly}
         />
 

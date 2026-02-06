@@ -53,16 +53,16 @@ export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: 
     <Table>
       <TableHeader>
         <TableRow>
+          <TableHead>Status</TableHead>
           <TableHead>Plate Number</TableHead>
           <TableHead>Conduction #</TableHead>
           <TableHead>Make</TableHead>
           <TableHead>Model</TableHead>
-          <TableHead>Variant</TableHead>
           <TableHead>Year</TableHead>
           <TableHead>VIN</TableHead>
           <TableHead>Fuel Capacity</TableHead>
           <TableHead>Ownership Type</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>Insurance Policy #</TableHead>
           <TableHead>Insurance Expiry</TableHead>
           <TableHead>Registration Expiry</TableHead>
           <TableHead className="text-right">Actions</TableHead>
@@ -76,6 +76,16 @@ export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: 
             onDoubleClick={() => onEdit(vehicle)}
             title="Double-click to edit"
           >
+            <TableCell>
+              <Badge variant={
+                vehicle.status === 'disposed' ? 'danger' :
+                vehicle.status === 'active' ? 'success' :
+                vehicle.status === 'maintenance' ? 'warning' :
+                'default'
+              }>
+                {vehicle.status}
+              </Badge>
+            </TableCell>
             <TableCell className="font-medium">
               {vehicle.plate_number}
             </TableCell>
@@ -89,9 +99,6 @@ export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: 
               {vehicle.model}
             </TableCell>
             <TableCell>
-              {vehicle.variant || '-'}
-            </TableCell>
-            <TableCell>
               {vehicle.year}
             </TableCell>
             <TableCell className="font-mono">
@@ -103,15 +110,8 @@ export default function VehicleTable({ vehicles, onDispose, onEdit, onDelete }: 
             <TableCell className="capitalize">
               {vehicle.ownership_type}
             </TableCell>
-            <TableCell>
-              <Badge variant={
-                vehicle.status === 'disposed' ? 'danger' :
-                vehicle.status === 'active' ? 'success' :
-                vehicle.status === 'maintenance' ? 'warning' :
-                'default'
-              }>
-                {vehicle.status}
-              </Badge>
+            <TableCell className="font-mono">
+              {vehicle.insurance_policy_number || '-'}
             </TableCell>
             <TableCell>
               {vehicle.insurance_expiry}
